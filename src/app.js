@@ -1,12 +1,17 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-
 const app =express();
 
-app.use(cors());
-app.use(express.json());
-app.use(morgan("dev"));
+const authRoutes = require('./routes/auth.routes');
+
+app.use(cors());//used to connect frontend or authorize frontend to access the backend
+app.use(express.json());// parse into json format
+app.use(morgan("dev"));//used to log each request used for debugging
+
+app.use('/api/auth',authRoutes);
+
+
 
 app.get('/',(req,res)=>{
     res.json({message:"Backend is running "});
