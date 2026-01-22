@@ -23,6 +23,10 @@ const registerUser = async (req, res, next) => {
       college: college || "",
       year: year,
     });
+
+    const token = generateToken(user._id); 
+    console.log("Token is ",token);
+    
     res.status(201).json({
       message: "Registered Successfully",
       user: {
@@ -33,7 +37,7 @@ const registerUser = async (req, res, next) => {
         year: user.year,
         role: user.role,
       },
-      token: generateToken(user._id),
+      token: token,
     });
   } catch (err) {
     next(err);

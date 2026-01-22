@@ -14,7 +14,7 @@ const protect = async (req,res,next)=>{
             res.status(401);
             throw new Error("Not authorized, token missing");
         }
-
+        
         const decoded = jwt.verify(token,process.env.JWT_SECRET);
         console.log(decoded);
         
