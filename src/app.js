@@ -4,6 +4,7 @@ const morgan = require('morgan');
 const app =express();
 
 const authRoutes = require('./routes/auth.routes');
+const { errorHandler, notFound } = require('./middlewares/error.middleware');
 
 app.use(cors());//used to connect frontend or authorize frontend to access the backend
 app.use(express.json());// parse into json format
@@ -16,5 +17,8 @@ app.use('/api/auth',authRoutes);
 app.get('/',(req,res)=>{
     res.json({message:"Backend is running "});
 });
+
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
