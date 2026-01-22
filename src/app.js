@@ -4,6 +4,7 @@ const morgan = require('morgan');
 const app =express();
 
 const authRoutes = require('./routes/auth.routes');
+
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
 
 app.use(cors());//used to connect frontend or authorize frontend to access the backend
