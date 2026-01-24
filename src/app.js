@@ -5,6 +5,7 @@ const app =express();
 
 const authRoutes = require('./routes/auth.routes');
 const postRoutes = require('./routes/post.routes');
+const userRoutes = require('./routes/user.routes');
 
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
 
@@ -14,7 +15,7 @@ app.use(morgan("dev"));//used to log each request used for debugging
 
 app.use('/api/auth',authRoutes);
 app.use("/api/posts",postRoutes);
-
+app.use("/api/users",userRoutes);
 
 app.get('/',(req,res)=>{
     res.json({message:"Backend is running "});
