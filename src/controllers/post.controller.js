@@ -175,4 +175,52 @@ const deletePost = async (req,res,next)=>{
     }
 };
 
-module.exports = {deletePost,updatePost,createPost, getAllPosts,getPostById};
+
+//adding upvote functionality
+const toggleUpvote = async (req,res,next)=>{
+    try{
+        const post = await Post.findById(req.params.id);
+
+        if(!post){
+            res.status(404);
+            throw new Error("Post not Found");
+        }
+        const userId = req.user._id.toString();
+
+        //check if user already upvoted
+        const alreadyUpvoted = post.upvotedBy
+            .map((id) => id.toString())
+            .includes(userId);
+
+        if(alreadyUpvoted){
+            //remove upvote
+            post.upvotedBy = post.upvotedBy.filter(
+                (id)=>id.toString()!==userId
+            );
+            post.upvotesCount = post.upvotesCount -1;
+
+            await post.save();
+
+            return res.json({
+                message:"Upvote removed",
+                upvotesCount: post.upvotesCount,
+            });
+        }
+        else{
+            //add upvote
+            post.upvotedBy.push(req.user._id);
+            post.upvotesCount = post.upvotesCount + 1;
+
+            await post.save();
+
+            return res.json({
+                message:"Post upvoted",
+                upvotesCount: post.upvotesCount,
+            });
+        }
+    }catch(err){
+        next(err);
+    }
+};
+
+module.exports = {toggleUpvote,deletePost,updatePost,createPost, getAllPosts,getPostById};
