@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+
 const app =express();
 
 const authRoutes = require('./routes/auth.routes');
@@ -11,9 +14,24 @@ const analyticsRoutes = require("./routes/analytics.routes");
 
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
 
-app.use(cors());//used to connect frontend or authorize frontend to access the backend
+app.use(cors({
+    origin:"*",
+    credentials:true
+}));//used to connect frontend or authorize frontend to access the backend
 app.use(express.json());// parse into json format
 app.use(morgan("dev"));//used to log each request used for debugging
+
+app.use(helmet()); // sets HTTP security headers
+
+//Basic rate Limiting (prevents and block spam)
+const limiter = rateLimit({
+    windowMs: 15*60*1000, //15 minutes
+    max:100, // max requests per IP in 15 minutes
+    message: "Too many requests, please try again later",
+});
+
+app.use(limiter);
+
 
 app.use('/api/auth',authRoutes);
 app.use("/api/posts",postRoutes);

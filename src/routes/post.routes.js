@@ -3,6 +3,7 @@ const express = require("express");
 
 const { protect } = require("../middlewares/auth.middleware");
 const { createPost, getAllPosts, deletePost, updatePost, getPostById, toggleUpvote } = require("../controllers/post.controller");
+const { isAdmin } = require("../middlewares/admin.middleware");
 const router = express.Router();
 
 //get all posts (public)
@@ -18,5 +19,8 @@ router.delete("/:id",protect,deletePost);
 
 //upvote route
 router.patch("/:id/upvote",protect,toggleUpvote);
+
+//admin route
+router.delete("/admin/:id",protect,isAdmin,deletePost);
 
 module.exports = router;

@@ -10,6 +10,19 @@ const createPost = async(req,res,next)=>{
             throw new Error("Company name and role are required");
         }
 
+        //adding extra safety validations
+        const allowedDifficulties = ["Easy","Medium","Hard"];
+        if(difficulty &&  !allowedDifficulties.includes(difficulty)){
+            res.status(400);
+            throw new Error("Invalid difficulty value");
+        }
+
+        const allowedResults = ["Selected","Rejected","Waiting"];
+        if(result && !allowedResults.includes(result)){
+            res.status(400);
+            throw new Error("Invalid result value");
+        }
+
         const post = await Post.create({
             authorId: req.user._id, //coming from protect middleware
             companyName,
