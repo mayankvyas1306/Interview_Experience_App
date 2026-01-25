@@ -64,6 +64,10 @@ const loginUser = async (req, res, next) => {
       res.status(401);
       throw new Error("Invalid email or Password");
     }
+
+    const token=generateToken(user._id);
+    console.log(token);
+
     res.json({
       message: "Login Successful",
       user: {
@@ -74,7 +78,9 @@ const loginUser = async (req, res, next) => {
         year: user.year,
         role: user.role,
       },
-      token: generateToken(user._id),
+      token: token,
+      
+      
     });
   } catch (err) {
     next(err);
