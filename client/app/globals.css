@@ -73,3 +73,64 @@ body{
 .form-control, .form-select{
   border-radius: 14px;
 }
+
+/* ✅ Fix dropdown option visibility in dark theme */
+select option {
+  background: #0b1020 !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* ✅ Fix inputs + selects look consistent */
+.form-control,
+.form-select,
+textarea {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+
+/* placeholder visibility */
+.form-control::placeholder,
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.40) !important;
+}
+
+/* on focus */
+.form-control:focus,
+.form-select:focus,
+textarea:focus {
+  border-color: rgba(0, 212, 255, 0.6) !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 212, 255, 0.15) !important;
+}
+
+
+/* ✅ improve recharts tooltip text in dark */
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+/* ✅ subtle glow on charts containers */
+.chart-glow {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 25px 80px rgba(0,0,0,0.55);
+}
+
+
+.tag-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(109, 94, 249, 0.14);
+  border: 1px solid rgba(109, 94, 249, 0.35);
+  color: rgba(255,255,255,0.9);
+  font-size: 0.82rem;
+}
+
+.dropdown-menu {
+  background: rgba(10, 14, 28, 0.95) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px !important;
+}
+.dropdown-item:hover {
+  background: rgba(255,255,255,0.08) !important;
+}
