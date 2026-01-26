@@ -1,26 +1,75 @@
-@import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+:root{
+  --bg: #070A12;
+  --card: rgba(255, 255, 255, 0.06);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --text: rgba(255, 255, 255, 0.92);
+  --muted: rgba(255, 255, 255, 0.65);
+  --accent: #6D5EF9;
+  --accent2: #00D4FF;
+  --shadow: 0 20px 70px rgba(0,0,0,0.55);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  background: radial-gradient(1200px 700px at 20% 10%, rgba(109,94,249,0.25), transparent 60%),
+              radial-gradient(900px 600px at 80% 30%, rgba(0,212,255,0.20), transparent 55%),
+              var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* glass card */
+.glass{
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* nice border glow */
+.glow-border{
+  position: relative;
+}
+
+.glow-border::before{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  border-radius: 24px;
+  padding: 1px;
+  background: linear-gradient(120deg, rgba(109,94,249,0.7), rgba(0,212,255,0.55));
+  -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events:none;
+}
+
+/* modern buttons */
+.btn-accent{
+  background: linear-gradient(120deg, var(--accent), var(--accent2));
+  border: none;
+  color: white;
+  font-weight: 700;
+}
+
+.btn-accent:hover{
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.text-muted2{
+  color: var(--muted);
+}
+
+.form-control::placeholder{
+  color: rgba(255,255,255,0.35);
+}
+
+.form-control, .form-select{
+  border-radius: 14px;
 }
