@@ -6,10 +6,11 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
-
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -32,9 +33,13 @@ export default function LoginPage() {
       });
 
       // ✅ Save token in browser storage
-      localStorage.setItem("token", res.data.token);
+      // localStorage.setItem("token", res.data.token);
+      // localStorage.setItem("fullName", res.data.user.fullName);
+
+      login(res.data.token, res.data.user.fullName);
+      
       localStorage.setItem("userId", res.data.user.id);
-      localStorage.setItem("fullName", res.data.user.fullName);
+      
 
       toast.success("Login successful ✅");
 

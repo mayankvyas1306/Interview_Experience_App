@@ -4,37 +4,40 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-
-  const [token, setToken] = useState<string | null>(null);
-  const [fullName, setFullName] = useState<string | null>(null);
+  const { user, logout } = useAuth();
+  // const [token, setToken] = useState<string | null>(null);
+  // const [fullName, setFullName] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   // ✅ Run on first load to check login state
-  useEffect(() => {
-    const t = localStorage.getItem("token");
-    const name = localStorage.getItem("fullName");
+  // not using instead creating context of it
+  // useEffect(() => {
+  //   const t = localStorage.getItem("token");
+  //   const name = localStorage.getItem("fullName");
 
-    setToken(t);
-    setFullName(name);
-  }, []);
+  //   setToken(t);
+  //   setFullName(name);
+  // }, []);
 
   const isActive = (href: string) => pathname === href;
 
+  //Not using because we have logout from AuthContext
   // ✅ Logout = clear token + redirect
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("fullName");
+  // const handleLogout = () => {
+  //   localStorage.removeItem("token");
+  //   localStorage.removeItem("userId");
+  //   localStorage.removeItem("fullName");
 
-    setToken(null);
-    setFullName(null);
+  //   setToken(null);
+  //   setFullName(null);
 
-    router.push("/auth/login");
-  };
+  //   router.push("/auth/login");
+  // };
 
   // ✅ Search => redirect to explore with query params
   const handleSearch = (e: React.FormEvent) => {
@@ -148,33 +151,27 @@ export default function Navbar() {
                 <i className="bi bi-list"></i>
               </button>
 
-              {token ? (
+              {user.token ? (
                 <div className="dropdown">
                   <button
-                    className="btn btn-outline-light rounded-3 dropdown-toggle"
+                    className="btn btn-outline-light dropdown-toggle"
                     data-bs-toggle="dropdown"
+                    aria-expanded="false"
                   >
-                    <i className="bi bi-person-circle me-2"></i>
-                    {fullName ? fullName.split(" ")[0] : "Account"}
+                    {user.fullName?.split(" ")[0]}
                   </button>
 
-                  <ul className="dropdown-menu dropdown-menu-dark dropdown-menu-end">
-                    <li>
-                      <Link className="dropdown-item" href="/saved">
-                        <i className="bi bi-bookmarks me-2"></i>
-                        Saved Posts
-                      </Link>
-                    </li>
+                  <ul className="dropdown-menu dropdown-menu-end dropdown-menu-dark">
                     <li>
                       <Link className="dropdown-item" href="/profile">
-                        <i className="bi bi-person-badge me-2"></i>
                         Profile
                       </Link>
                     </li>
-                    <li><hr className="dropdown-divider" /></li>
                     <li>
-                      <button className="dropdown-item text-danger" onClick={handleLogout}>
-                        <i className="bi bi-box-arrow-right me-2"></i>
+                      <button
+                        className="dropdown-item text-danger"
+                        onClick={logout}
+                      >
                         Logout
                       </button>
                     </li>
@@ -182,10 +179,10 @@ export default function Navbar() {
                 </div>
               ) : (
                 <>
-                  <Link href="/auth/login" className="btn btn-outline-light rounded-3">
+                  <Link href="/auth/login" className="btn btn-outline-light">
                     Login
                   </Link>
-                  <Link href="/auth/register" className="btn btn-accent rounded-3">
+                  <Link href="/auth/register" className="btn btn-accent">
                     Register
                   </Link>
                 </>
@@ -197,13 +194,22 @@ export default function Navbar() {
           <div className="collapse mt-3 d-md-none" id="navMobile">
             <div className="glass rounded-4 p-3">
               <div className="d-flex flex-column gap-2">
-                <Link href="/explore" className="btn btn-outline-light rounded-3 text-start">
+                <Link
+                  href="/explore"
+                  className="btn btn-outline-light rounded-3 text-start"
+                >
                   <i className="bi bi-compass me-2"></i> Explore
                 </Link>
-                <Link href="/analytics" className="btn btn-outline-light rounded-3 text-start">
+                <Link
+                  href="/analytics"
+                  className="btn btn-outline-light rounded-3 text-start"
+                >
                   <i className="bi bi-graph-up-arrow me-2"></i> Analytics
                 </Link>
-                <Link href="/create" className="btn btn-outline-light rounded-3 text-start">
+                <Link
+                  href="/create"
+                  className="btn btn-outline-light rounded-3 text-start"
+                >
                   <i className="bi bi-plus-circle me-2"></i> Share
                 </Link>
 
@@ -221,8 +227,11 @@ export default function Navbar() {
                   </div>
                 </form>
 
-                {token && (
-                  <button onClick={handleLogout} className="btn btn-outline-danger rounded-3 mt-2">
+                {user.token && (
+                  <button
+                    onClick={logout}
+                    className="btn btn-outline-danger rounded-3 mt-2"
+                  >
                     <i className="bi bi-box-arrow-right me-2"></i> Logout
                   </button>
                 )}

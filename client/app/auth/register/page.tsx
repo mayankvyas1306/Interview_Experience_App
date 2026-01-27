@@ -6,10 +6,11 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export default function RegisterPage() {
   const router = useRouter();
-
+  const {login} = useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,9 +43,10 @@ export default function RegisterPage() {
         year,
       });
 
-      localStorage.setItem("token", res.data.token);
+      // localStorage.setItem("token", res.data.token);
       localStorage.setItem("userId", res.data.user.id);
-      localStorage.setItem("fullName", res.data.user.fullName);
+      // localStorage.setItem("fullName", res.data.user.fullName);
+      login(res.data.token,res.data.fullName);
 
 
       toast.success("Account created ✅");
