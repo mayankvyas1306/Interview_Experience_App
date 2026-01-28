@@ -1,5 +1,5 @@
 const express = require("express");
-const { getOverviewAnalytics, getCompanyTopicsAnalytics, getTrendingPosts } = require("../controllers/analytics.controller");
+const { getOverviewAnalytics, getCompanyTopicsAnalytics, getTrendingPosts, getCompaniesList } = require("../controllers/analytics.controller");
 const router = express.Router();
 
 
@@ -11,5 +11,8 @@ router.get("/company-topics",getCompanyTopicsAnalytics);
 
 //trending posts
 router.get("/trending",getTrendingPosts);
+
+//company list
+router.get("/companies",getCompaniesList);
 
 module.exports = router;

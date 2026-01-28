@@ -88,8 +88,19 @@ const getTrendingPosts = async (req, res, next) => {
   }
 };
 
+//get companies list
+const getCompaniesList = async(req,res,next)=>{
+  try{
+    const companies = await Post.distinct("companyName");
+    res.json({companies});
+  }catch(err){
+    next(err);
+  }
+}
+
 module.exports = {
   getOverviewAnalytics,
   getCompanyTopicsAnalytics,
   getTrendingPosts,
+  getCompaniesList
 };

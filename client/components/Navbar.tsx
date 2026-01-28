@@ -128,7 +128,7 @@ export default function Navbar() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="bg-transparent border-0 text-light ms-2"
-                placeholder="Search company (Amazon, Google...)"
+                placeholder="Search company.."
                 style={{ outline: "none", width: "100%" }}
               />
               <button
