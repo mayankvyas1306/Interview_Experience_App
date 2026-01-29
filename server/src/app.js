@@ -11,6 +11,7 @@ const postRoutes = require('./routes/post.routes');
 const userRoutes = require('./routes/user.routes');
 const commentRoutes = require('./routes/comment.routes')
 const analyticsRoutes = require("./routes/analytics.routes");
+const adminRoutes = require("./routes/admin.routes");
 
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
 
@@ -38,6 +39,7 @@ app.use("/api/posts",postRoutes);
 app.use("/api/users",userRoutes);
 app.use("/api/comments",commentRoutes);
 app.use("/api/analytics",analyticsRoutes);
+app.use("/api/admin",adminRoutes);
 
 app.get('/',(req,res)=>{
     res.json({message:"Backend is running "});
