@@ -10,6 +10,9 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+
+  if (user === undefined) return null;
+
   // const [token, setToken] = useState<string | null>(null);
   // const [fullName, setFullName] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -151,7 +154,7 @@ export default function Navbar() {
                 <i className="bi bi-list"></i>
               </button>
 
-              {user.token ? (
+              {user ? (
                 <div className="dropdown">
                   <button
                     className="btn btn-outline-light dropdown-toggle"
@@ -166,6 +169,13 @@ export default function Navbar() {
                       <Link className="dropdown-item" href="/profile">
                         Profile
                       </Link>
+                    </li>
+                    <li>
+                      {user?.role === "admin" && (
+                        <Link className="dropdown-item" href="/admin">
+                          Admin Panel
+                        </Link>
+                      )}
                     </li>
                     <li>
                       <button
@@ -227,7 +237,7 @@ export default function Navbar() {
                   </div>
                 </form>
 
-                {user.token && (
+                {user && (
                   <button
                     onClick={logout}
                     className="btn btn-outline-danger rounded-3 mt-2"

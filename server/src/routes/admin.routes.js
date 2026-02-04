@@ -1,13 +1,33 @@
-const { isAdmin } = require("../middlewares/admin.middleware");
-const { adminDeletePost, getAllPostsAdmin } = require("../controllers/admin.controller");
-const { protect } = require("../middlewares/auth.middleware");
 const express = require("express");
+const { protect } = require("../middlewares/auth.middleware");
+const { isAdmin } = require("../middlewares/admin.middleware");
 
-const router=express.Router();
+const {
+  getAdminStats,
+  getAllPostsAdmin,
+  adminDeletePost,
+  getAllUsersAdmin,
+  toggleBanUser,
+  toggleAdminRole,
+} = require("../controllers/admin.controller");
 
+const router = express.Router();
 
-//admin route
-router.delete("/:id",protect,isAdmin,adminDeletePost);
-router.get("/posts",protect,isAdmin,getAllPostsAdmin);
+/**
+ * Every admin route protected
+ */
+router.use(protect, isAdmin);
 
-module.exports= router;
+// DASHBOARD
+router.get("/stats", getAdminStats);
+
+// POSTS
+router.get("/posts", getAllPostsAdmin);
+router.delete("/posts/:id", adminDeletePost);
+
+// USERS
+router.get("/users", getAllUsersAdmin);
+router.patch("/users/:id/ban", toggleBanUser);
+router.patch("/users/:id/role", toggleAdminRole);
+
+module.exports = router;

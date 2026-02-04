@@ -36,14 +36,18 @@ export default function LoginPage() {
       // localStorage.setItem("token", res.data.token);
       // localStorage.setItem("fullName", res.data.user.fullName);
 
-      login(res.data.token, res.data.user.fullName);
-      
+      login({
+        id: res.data.user.id,
+        fullName: res.data.user.fullName,
+        email: res.data.user.email,
+        role: res.data.user.role,
+        token: res.data.token,
+      });
+
       localStorage.setItem("userId", res.data.user.id);
-      
+      localStorage.setItem("user", JSON.stringify(res.data.user));
 
       toast.success("Login successful ✅");
-
-      
 
       // ✅ Redirect after login
       setTimeout(() => {
@@ -74,7 +78,8 @@ export default function LoginPage() {
               </div>
               <h2 className="fw-bold mt-2">Welcome back</h2>
               <p className="text-muted2 mb-0">
-                Login to continue on <span className="fw-semibold">InterviewPulse</span>
+                Login to continue on{" "}
+                <span className="fw-semibold">InterviewPulse</span>
               </p>
             </div>
 
@@ -112,7 +117,10 @@ export default function LoginPage() {
 
             <div className="text-center mt-4">
               <span className="text-muted2">New here?</span>{" "}
-              <Link href="/auth/register" className="text-decoration-none fw-semibold">
+              <Link
+                href="/auth/register"
+                className="text-decoration-none fw-semibold"
+              >
                 Create account
               </Link>
             </div>
