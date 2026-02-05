@@ -3,15 +3,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-
-  if (user === undefined) return null;
 
   // const [token, setToken] = useState<string | null>(null);
   // const [fullName, setFullName] = useState<string | null>(null);

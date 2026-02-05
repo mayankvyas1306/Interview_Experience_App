@@ -3,23 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export default function AdminSidebar() {
-  const path = usePathname();
+type AdminItemProps = {
+  href: string;
+  label: string;
+  icon: string;
+  isActive: boolean;
+};
 
-  const Item = ({
-    href,
-    label,
-    icon,
-  }: {
-    href: string;
-    label: string;
-    icon: string;
-  }) => (
+function AdminNavItem({ href, label, icon, isActive }: AdminItemProps) {
+  return (
     <Link
       href={href}
       className={`d-block px-3 py-2 rounded-3 text-decoration-none mb-1
       ${
-        path === href
+        isActive
           ? "bg-primary text-white"
           : "text-light"
       }`}
@@ -28,6 +25,10 @@ export default function AdminSidebar() {
       {label}
     </Link>
   );
+}
+
+export default function AdminSidebar() {
+  const path = usePathname();
 
   return (
     <div
@@ -40,9 +41,24 @@ export default function AdminSidebar() {
     >
       <h5 className="fw-bold mb-4">Admin Panel</h5>
 
-      <Item href="/admin" label="Dashboard" icon="bi-speedometer2" />
-      <Item href="/admin/users" label="Users" icon="bi-people" />
-      <Item href="/admin/reports" label="Reports" icon="bi-flag" />
+      <AdminNavItem
+        href="/admin"
+        label="Dashboard"
+        icon="bi-speedometer2"
+        isActive={path === "/admin"}
+      />
+      <AdminNavItem
+        href="/admin/users"
+        label="Users"
+        icon="bi-people"
+        isActive={path === "/admin/users"}
+      />
+      <AdminNavItem
+        href="/admin/reports"
+        label="Reports"
+        icon="bi-flag"
+        isActive={path === "/admin/reports"}
+      />
     </div>
   );
 }

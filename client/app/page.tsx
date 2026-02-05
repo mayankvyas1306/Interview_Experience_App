@@ -27,8 +27,8 @@ export default function Home() {
             trendingRes.data.trending?.[0]?.tags?.slice(0, 2).join(" + ") ||
             "—",
         });
-      } catch (err) {
-        console.error("Failed to load prep radar");
+      } catch (error) {
+        console.error("Failed to load prep radar", error);
       }
     };
 

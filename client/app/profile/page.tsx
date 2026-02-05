@@ -11,7 +11,9 @@ export default function ProfilePage() {
 
   const [user, setUser] = useState<any>(null);
   const [savedCount, setSavedCount] = useState(0);
+  const [savedPosts, setSavedPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const fetchProfile = async () => {
     try {
@@ -23,6 +25,7 @@ export default function ProfilePage() {
       // ✅ fetch saved count
       const savedRes = await api.get("/users/saved");
       setSavedCount(savedRes.data.totalSaved);
+      setSavedPosts(savedRes.data.savedPosts || []);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Please login again");
       router.push("/auth/login");
@@ -34,6 +37,21 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchProfile();
   }, []);
+
+  const handleToggleSave = async (postId: string) => {
+    try {
+      setSavingId(postId);
+      await api.patch(`/users/save/${postId}`);
+      const savedRes = await api.get("/users/saved");
+      setSavedCount(savedRes.data.totalSaved);
+      setSavedPosts(savedRes.data.savedPosts || []);
+      toast.success("Saved list updated ✅");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to update saved list");
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   return (
     <div className="container py-5">
@@ -126,6 +144,58 @@ export default function ProfilePage() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Saved Posts */}
+          <div className="col-12">
+            <div className="glass rounded-4 p-4">
+              <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div>
+                  <h5 className="fw-bold mb-1">Saved Experiences</h5>
+                  <p className="text-muted2 mb-0">
+                    Quickly revisit the interview stories you bookmarked.
+                  </p>
+                </div>
+                <div className="text-muted2 small">
+                  Total saved: <span className="text-light fw-semibold">{savedCount}</span>
+                </div>
+              </div>
+
+              {savedPosts.length === 0 ? (
+                <div className="text-muted2">No saved posts yet. Explore and save your favorites!</div>
+              ) : (
+                <div className="row g-3">
+                  {savedPosts.map((post) => (
+                    <div key={post._id} className="col-md-6 col-xl-4">
+                      <div className="glass rounded-4 p-4 h-100">
+                        <div className="d-flex justify-content-between align-items-start">
+                          <div>
+                            <h6 className="fw-bold mb-1">{post.companyName}</h6>
+                            <div className="text-muted2 small">{post.role}</div>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-outline-light btn-sm"
+                            disabled={savingId === post._id}
+                            onClick={() => handleToggleSave(post._id)}
+                          >
+                            {savingId === post._id ? "Updating..." : "Unsave"}
+                          </button>
+                        </div>
+                        <div className="mt-3">
+                          <a
+                            href={`/post/${post._id}`}
+                            className="btn btn-accent btn-sm rounded-3"
+                          >
+                            View Post
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

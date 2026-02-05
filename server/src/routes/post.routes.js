@@ -3,6 +3,8 @@ const express = require("express");
 
 const { protect } = require("../middlewares/auth.middleware");
 const { createPost, getAllPosts, deletePost, updatePost, getPostById, toggleUpvote } = require("../controllers/post.controller");
+const { validateBody } = require("../middlewares/validate.middleware");
+const { createPostSchema, updatePostSchema } = require("../validators/post.schema");
 
 const router = express.Router();
 
@@ -10,11 +12,11 @@ const router = express.Router();
 router.get("/",getAllPosts);
 
 //create post (protected)
-router.post("/",protect,createPost);
+router.post("/",protect,validateBody(createPostSchema),createPost);
 
 //single post routes
 router.get("/:id",getPostById);
-router.put("/:id",protect,updatePost);
+router.put("/:id",protect,validateBody(updatePostSchema),updatePost);
 router.delete("/:id",protect,deletePost);
 
 //upvote route

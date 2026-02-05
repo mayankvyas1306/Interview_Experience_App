@@ -46,7 +46,13 @@ export default function RegisterPage() {
       // localStorage.setItem("token", res.data.token);
       localStorage.setItem("userId", res.data.user.id);
       // localStorage.setItem("fullName", res.data.user.fullName);
-      login(res.data.token,res.data.fullName);
+      login({
+        id: res.data.user.id,
+        fullName: res.data.user.fullName,
+        email: res.data.user.email,
+        role: res.data.user.role,
+        token: res.data.token,
+      });
 
 
       toast.success("Account created ✅");
