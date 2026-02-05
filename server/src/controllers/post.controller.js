@@ -1,4 +1,5 @@
 const Post = require("../models/Post");
+const { clearCacheByPrefix } = require("../utils/cache");
 
 //create a new interview experience post
 const createPost = async(req,res,next)=>{
@@ -32,6 +33,9 @@ const createPost = async(req,res,next)=>{
             result: result || "Waiting",
             rounds : rounds || [],
         });
+
+        clearCacheByPrefix("analytics:");
+
         res.status(201).json({message:"Post created Successfully",post});
     }catch(err){
         next(err);
@@ -158,6 +162,8 @@ const updatePost = async (req,res,next) => {
 
         const updatePost = await post.save();
 
+        clearCacheByPrefix("analytics:");
+
         res.json({
             message : "Post updated successfully",
             post: updatePost,
@@ -183,6 +189,8 @@ const deletePost = async (req,res,next)=>{
         }
 
         await Post.deleteOne({_id: post._id});
+
+        clearCacheByPrefix("analytics:");
 
         res.json({message: "Post deleted Successfully "});
     }catch(err){
@@ -216,6 +224,8 @@ const toggleUpvote = async (req,res,next)=>{
 
             await post.save();
 
+            clearCacheByPrefix("analytics:");
+
             return res.json({
                 message:"Upvote removed",
                 upvotesCount: post.upvotesCount,
@@ -227,6 +237,8 @@ const toggleUpvote = async (req,res,next)=>{
             post.upvotesCount = post.upvotesCount + 1;
 
             await post.save();
+            
+            clearCacheByPrefix("analytics:");
 
             return res.json({
                 message:"Post upvoted",

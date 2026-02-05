@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const { clearAuthCookie, setAuthCookie } = require("../utils/authCookies");
 const generateToken = require("../utils/generateToken");
 
 const registerUser = async (req, res, next) => {
@@ -27,6 +28,8 @@ const registerUser = async (req, res, next) => {
     const token = generateToken(user._id); 
     console.log("Token is ",token);
     
+    setAuthCookie(res,token);
+
     res.status(201).json({
       message: "Registered Successfully",
       user: {
@@ -68,6 +71,8 @@ const loginUser = async (req, res, next) => {
     const token=generateToken(user._id);
     console.log(token);
 
+    setAuthCookie(res,token);
+
     res.json({
       message: "Login Successful",
       user: {
@@ -105,4 +110,12 @@ const getMe = async (req, res, next) => {
   }
 };
 
-module.exports = { registerUser, loginUser, getMe };
+const logoutUser = async(req,res,next)=>{
+  try{
+    clearAuthCookie(res);
+    res.json({message:"Logged Out Successfully"});
+  }catch(err){
+    next(err);
+  }
+};
+module.exports = { registerUser, loginUser, getMe,logoutUser };
