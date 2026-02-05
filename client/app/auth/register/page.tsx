@@ -46,7 +46,8 @@ export default function RegisterPage() {
       // localStorage.setItem("token", res.data.token);
       localStorage.setItem("userId", res.data.user.id);
       // localStorage.setItem("fullName", res.data.user.fullName);
-      login(res.data.token,res.data.fullName);
+      login(res.data.token, res.data.user.fullName);
+
 
 
       toast.success("Account created ✅");
@@ -89,7 +90,7 @@ export default function RegisterPage() {
                   <label className="form-label text-muted2">Full Name</label>
                   <input
                     className="form-control bg-transparent text-light border-secondary"
-                    placeholder="Mayank Vyas"
+                    placeholder="Your Name"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                   />

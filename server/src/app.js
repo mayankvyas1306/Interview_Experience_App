@@ -3,6 +3,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const {env}=require("./config/env");
 
 const app =express();
 
@@ -15,10 +16,24 @@ const adminRoutes = require("./routes/admin.routes");
 
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
 
-app.use(cors({
-    origin:"*",
-    credentials:true
-}));//used to connect frontend or authorize frontend to access the backend
+
+//used to connect frontend or authorize frontend to access the backend
+const allowedOrigins = env.CLIENT_URL.split(",").map((origin)=> origin.trim());
+app.use(
+    cors({
+        origin:(origin,callback)=>{
+            if(!origin){
+                return callback(null,true);
+            }
+            if(allowedOrigins.includes(origin)){
+                return callback(null,true);
+            }
+            return callback(new Error("Not allowed by CORS"));
+        },
+        credentials:true,
+    }),
+);
+
 app.use(express.json());// parse into json format
 app.use(morgan("dev"));//used to log each request used for debugging
 
@@ -40,6 +55,11 @@ app.use("/api/users",userRoutes);
 app.use("/api/comments",commentRoutes);
 app.use("/api/analytics",analyticsRoutes);
 app.use("/api/admin",adminRoutes);
+
+
+app.get("/health",(req,res)=>{
+    res.json({status:"ok"});
+});
 
 app.get('/',(req,res)=>{
     res.json({message:"Backend is running "});
