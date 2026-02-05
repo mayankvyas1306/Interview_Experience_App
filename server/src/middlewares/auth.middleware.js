@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { env } = require("../config/env");
-const { parseCookies } =require("../utils/authCookies")
+const { parseCookies } = require("../utils/authCookies");
 
 const protect = async (req, res, next) => {
   try {
@@ -14,7 +14,7 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(" ")[1];
     }
 
-    if(!token && req.headers.cookie){
+    if (!token && req.headers.cookie) {
       const cookies = parseCookies(req.headers.cookie);
       token = cookies[env.JWT_COOKIE_NAME];
     }

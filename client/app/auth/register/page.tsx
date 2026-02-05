@@ -51,9 +51,8 @@ export default function RegisterPage() {
         fullName: res.data.user.fullName,
         email: res.data.user.email,
         role: res.data.user.role,
-        token:res.data.token,
-      })
-
+        token: res.data.token,
+      });
 
 
       toast.success("Account created ✅");

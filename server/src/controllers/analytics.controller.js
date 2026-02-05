@@ -1,13 +1,12 @@
 const Post = require("../models/Post");
-const { setCache, getCache } = require("../utils/cache");
+const { getCache, setCache } = require("../utils/cache");
 
 // OVERVIEW ANALYTICS
 const getOverviewAnalytics = async (req, res, next) => {
   try {
-
     const cacheKey = "analytics:overview";
     const cached = getCache(cacheKey);
-    if(cached){
+    if (cached) {
       return res.json(cached);
     }
 
@@ -41,7 +40,7 @@ const getOverviewAnalytics = async (req, res, next) => {
       topCompanies,
     };
 
-    setCache(cacheKey,payload);
+    setCache(cacheKey, payload);
     res.json(payload);
   } catch (err) {
     next(err);
@@ -82,11 +81,12 @@ const getCompanyTopicsAnalytics = async (req, res, next) => {
       { $sort: { count: -1 } },
     ]);
 
-    const payload={
+    const payload = {
       company,
       topics: companyTopics,
     };
-    setCache(cacheKey,payload);
+
+    setCache(cacheKey, payload);
     res.json(payload);
   } catch (err) {
     next(err);
@@ -96,7 +96,6 @@ const getCompanyTopicsAnalytics = async (req, res, next) => {
 // TRENDING POSTS
 const getTrendingPosts = async (req, res, next) => {
   try {
-
     const cacheKey = "analytics:trending";
     const cached = getCache(cacheKey);
     if (cached) {
@@ -121,14 +120,13 @@ const getCompaniesList = async(req,res,next)=>{
   try{
     const cacheKey = "analytics:companies";
     const cached = getCache(cacheKey);
-    if(cached){
+    if (cached) {
       return res.json(cached);
     }
 
     const companies = await Post.distinct("companyName");
-    
     const payload = { companies };
-    setCache(cacheKey,payload);
+    setCache(cacheKey, payload);
     res.json(payload);
   }catch(err){
     next(err);

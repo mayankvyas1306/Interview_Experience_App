@@ -33,9 +33,7 @@ const createPost = async(req,res,next)=>{
             result: result || "Waiting",
             rounds : rounds || [],
         });
-
         clearCacheByPrefix("analytics:");
-
         res.status(201).json({message:"Post created Successfully",post});
     }catch(err){
         next(err);
@@ -51,9 +49,8 @@ const getAllPosts = async (req,res,next)=>{
 
         //pagination default
         const page = Number(req.query.page) || 1;
-        // const limit = Number(req.query.limit) || 10;
         const requestedLimit = Number(req.query.limit) || 10;
-        const limit = Math.min(requestedLimit,50);
+        const limit = Math.min(requestedLimit, 50);
         const skip = (page-1)*limit;
 
         //Filters object (MongoDB query)
@@ -163,7 +160,6 @@ const updatePost = async (req,res,next) => {
         const updatePost = await post.save();
 
         clearCacheByPrefix("analytics:");
-
         res.json({
             message : "Post updated successfully",
             post: updatePost,
@@ -189,6 +185,7 @@ const deletePost = async (req,res,next)=>{
         }
 
         await Post.deleteOne({_id: post._id});
+        clearCacheByPrefix("analytics:");
 
         clearCacheByPrefix("analytics:");
 
@@ -223,6 +220,7 @@ const toggleUpvote = async (req,res,next)=>{
             post.upvotesCount = post.upvotesCount -1;
 
             await post.save();
+            clearCacheByPrefix("analytics:");
 
             clearCacheByPrefix("analytics:");
 
@@ -237,7 +235,6 @@ const toggleUpvote = async (req,res,next)=>{
             post.upvotesCount = post.upvotesCount + 1;
 
             await post.save();
-            
             clearCacheByPrefix("analytics:");
 
             return res.json({

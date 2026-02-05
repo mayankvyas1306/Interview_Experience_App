@@ -1,21 +1,21 @@
-const requiredEnv = ["MONGO_URI","JWT_SECRET"];
+const requiredEnv = ["MONGO_URI", "JWT_SECRET"];
 
-const getEnv = (key,fallback)=>{
-    const value = process.env[key];
-    if(value!==undefined && value!==""){
-        return value;
-    }
-    return fallback;
+const getEnv = (key, fallback) => {
+  const value = process.env[key];
+  if (value !== undefined && value !== "") {
+    return value;
+  }
+  return fallback;
 };
 
 const validateEnv = () => {
-    const missing = requiredEnv.filter((key)=>!getEnv(key));
+  const missing = requiredEnv.filter((key) => !getEnv(key));
 
-    if(missing.length){
-        throw new Error(
-            `Missing required environment variables : ${missing.join(", ")}`,
-        );
-    }
+  if (missing.length) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(", ")}`,
+    );
+  }
 };
 
 const env = {
@@ -28,4 +28,4 @@ const env = {
   JWT_SECRET: getEnv("JWT_SECRET"),
 };
 
-module.exports = { env, validateEnv}
+module.exports = { env, validateEnv };

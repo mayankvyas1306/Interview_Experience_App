@@ -1,10 +1,9 @@
 require('dotenv').config();
 const app = require('./app');
 const connectDB = require('./config/db');
-const { env, validateEnv} = require("./config/env");
+const { env, validateEnv } = require("./config/env");
 
-
-validateEnv();//validate whether you have all the urls in dot env or not
+validateEnv();
 connectDB();
 
 const PORT = env.PORT || 5000;

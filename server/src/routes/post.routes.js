@@ -3,15 +3,15 @@ const express = require("express");
 
 const { protect } = require("../middlewares/auth.middleware");
 const { createPost, getAllPosts, deletePost, updatePost, getPostById, toggleUpvote } = require("../controllers/post.controller");
+const { validateBody } = require("../middlewares/validate.middleware");
 const { createPostSchema, updatePostSchema } = require("../validators/post.schema");
-const {validateBody}= require("../middlewares/validate.middleware");
 
 const router = express.Router();
 
 //get all posts (public)
 router.get("/",getAllPosts);
 
-//create post (protected) and also schema validated
+//create post (protected)
 router.post("/",protect,validateBody(createPostSchema),createPost);
 
 //single post routes

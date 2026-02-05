@@ -62,11 +62,10 @@ const postSchema = new mongoose.Schema({
     }],
 },{timestamps:true});
 
-postSchema.index({ companyName:1 });
-postSchema.index({ tags: 1});
-postSchema.index({createdAt: -1});
-postSchema.index({ upvotesCount:-1});
-
+postSchema.index({ companyName: 1 });
+postSchema.index({ tags: 1 });
+postSchema.index({ createdAt: -1 });
+postSchema.index({ upvotesCount: -1 });
 
 const Post = mongoose.model("Post",postSchema);
 
