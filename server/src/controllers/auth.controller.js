@@ -1,7 +1,6 @@
 const User = require("../models/User");
 const { clearAuthCookie, setAuthCookie } = require("../utils/authCookies");
 const generateToken = require("../utils/generateToken");
-const { setAuthCookie, clearAuthCookie } = require("../utils/authCookies");
 
 const registerUser = async (req, res, next) => {
   try {
@@ -31,7 +30,6 @@ const registerUser = async (req, res, next) => {
 
     setAuthCookie(res, token);
     
-    setAuthCookie(res,token);
 
     res.status(201).json({
       message: "Registered Successfully",

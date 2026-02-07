@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require("helmet");
-const rateLimit = require("express-rate-limit");
 const { env } = require("./config/env");
 
 const app =express();
@@ -15,6 +14,7 @@ const analyticsRoutes = require("./routes/analytics.routes");
 const adminRoutes = require("./routes/admin.routes");
 
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
+const { authLimiter, apiLimiter, adminLimiter, globalLimiter } = require('./middlewares/rateLimit.middleware');
 
 const allowedOrigins = env.CLIENT_URL.split(",").map((origin) => origin.trim());
 app.use(
@@ -31,27 +31,43 @@ app.use(
         credentials: true,
     }),
 );//used to connect frontend or authorize frontend to access the backend
-app.use(express.json());// parse into json format
+app.use(express.json());// Converts incoming JSON payloads into req.body object
+
+if(env.NODE_ENV === "development"){
 app.use(morgan("dev"));//used to log each request used for debugging
+}
 
-app.use(helmet()); // sets HTTP security headers
+/**
+ * Helmet - Security headers
+ * Why: Protects against common web vulnerabilities
+ * Sets headers like X-Frame-Options, X-Content-Type-Options, etc.
+ */
+app.use(helmet());
 
-//Basic rate Limiting (prevents and block spam)
-const limiter = rateLimit({
-    windowMs: 15*60*1000, //15 minutes
-    max:100, // max requests per IP in 15 minutes
-    message: "Too many requests, please try again later",
-});
+/**
+ * GLOBAL RATE LIMITER
+ * Why: Applied to all requests as baseline DoS protection
+ * Very lenient in development (1000 req/15min)
+ * More strict in production (200 req/15min)
+ */
+app.use(globalLimiter);
 
-app.use(limiter);
 
+/**
+ * ROUTE-SPECIFIC RATE LIMITING
+ * Why: Each route type needs different protection levels
+ * - Auth routes: Strictest (prevent brute force)
+ * - API routes: Moderate (normal traffic)
+ * - Analytics: No extra limit (responses are cached)
+ * - Admin: Lenient (admins need flexibility for bulk operations)
+ */
 
-app.use('/api/auth',authRoutes);
-app.use("/api/posts",postRoutes);
-app.use("/api/users",userRoutes);
-app.use("/api/comments",commentRoutes);
+app.use('/api/auth',authLimiter,authRoutes);
+app.use("/api/posts",apiLimiter,postRoutes);
+app.use("/api/users",apiLimiter,userRoutes);
+app.use("/api/comments",apiLimiter,commentRoutes);
 app.use("/api/analytics",analyticsRoutes);
-app.use("/api/admin",adminRoutes);
+app.use("/api/admin",adminLimiter,adminRoutes);
 
 app.get("/health",(req,res)=>{
     res.json({ status: "ok" });

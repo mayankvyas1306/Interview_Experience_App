@@ -7,21 +7,68 @@ import Link from "next/link";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true); // Add loading state
+  const [error, setError] = useState<string | null>(null); // Add error state
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        setLoading(true); // Start loading
+        setError(null); // Clear any previous errors
+        
         const res = await api.get("/admin/stats");
         setStats(res.data);
-      } catch {
-        toast.error("Failed to load admin stats");
+      } catch (err: any) {
+        const errorMessage = err?.response?.data?.message || "Failed to load admin stats";
+        setError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setLoading(false); // Always stop loading
       }
     };
 
     fetchStats();
   }, []);
 
-  if (!stats) return <p className="text-center mt-5">Loading...</p>;
+  // Loading state
+  if (loading) {
+    return (
+      <div className="container py-5 text-center">
+        <div className="spinner-border text-light" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+        <p className="text-muted2 mt-3">Loading admin dashboard...</p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="container py-5">
+        <div className="glass rounded-4 p-5 text-center">
+          <i className="bi bi-exclamation-triangle fs-1 text-warning"></i>
+          <h4 className="fw-bold mt-3">Error Loading Dashboard</h4>
+          <p className="text-muted2">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn btn-accent mt-3"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // No stats (shouldn't happen, but defensive programming)
+  if (!stats) {
+    return (
+      <div className="container py-5 text-center">
+        <p className="text-muted2">No statistics available</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-5">

@@ -37,8 +37,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    //clear all auth data from localStorage
     localStorage.clear();
+
+    //clear user state
     setUser(null);
+
+    //Redirect to login page
+    //prevents showing blank page, gives clear next action
+    window.location.href = "/auth/login";
   };
 
   return (
