@@ -9,9 +9,10 @@ const roundSchema = new mongoose.Schema(
         },
         description:{
             type:String,
-            required:true
+            required:false,
+            default:""
         },
-        question:[{
+        questions:[{
             type:String
         }],
     },{_id:false}

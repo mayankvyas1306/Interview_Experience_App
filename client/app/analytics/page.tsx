@@ -143,8 +143,9 @@ export default function AnalyticsPage() {
                 Number of interview posts where each topic appeared.
               </p>
 
-              <div style={{ height: 260 }}>
-                <ResponsiveContainer>
+              {/* ✅ FIXED: Added explicit height */}
+              <div style={{ width: '100%', height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={mostAskedTopics}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                     <XAxis dataKey="name" />
@@ -164,8 +165,9 @@ export default function AnalyticsPage() {
                 Companies with highest interview activity.
               </p>
 
-              <div style={{ height: 260 }}>
-                <ResponsiveContainer>
+              {/* ✅ FIXED: Added explicit height */}
+              <div style={{ width: '100%', height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={topCompanies}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                     <XAxis dataKey="name" />
@@ -199,8 +201,10 @@ export default function AnalyticsPage() {
               <p className="text-muted2 small">
                 Topics asked by a specific company.
               </p>
-              <div style={{ height: 260 }}>
-                <ResponsiveContainer>
+              
+              {/* ✅ FIXED: Added explicit height */}
+              <div style={{ width: '100%', height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={companyTopics}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                     <XAxis dataKey="name" />

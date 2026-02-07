@@ -17,8 +17,8 @@ const basePostSchema = {
     required: false,
     fields: {
       roundName: { type: "string", required: true, min: 1 },
-      description: { type: "string", required: true, min: 1 },
-      question: { type: "arrayOfStrings", required: false },
+      description: { type: "string", required: false, min: 0 },
+      questions: { type: "arrayOfStrings", required: false },
     },
   },
 };
