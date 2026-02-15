@@ -28,11 +28,12 @@ const createPost = async(req,res,next)=>{
             authorId: req.user._id, //coming from protect middleware
             companyName,
             role,
-            tags: tags || [],
+            tags: (tags || []).map((t)=>t.toLowerCase().trim()),
             difficulty: difficulty || "Medium",
             result: result || "Waiting",
             rounds : rounds || [],
         });
+        
         clearCacheByPrefix("analytics:");
         res.status(201).json({message:"Post created Successfully",post});
     }catch(err){
@@ -80,7 +81,8 @@ const getAllPosts = async (req,res,next)=>{
 
         //filter by tag(single tag for now)
         if(req.query.tag){
-            filters.tags = {$in:[req.query.tag]};
+            const tagRegex = new RegExp(`^${req.query.tag.trim()}$`,"i");
+            filters.tags = {$elemMatch: { $regex: tagRegex } };
         }
 
         //sort options
@@ -155,7 +157,7 @@ const updatePost = async (req,res,next) => {
         //company only if values are sent
         post.companyName = companyName || post.companyName;
         post.role = role || post.role;
-        post.tags = tags || post.tags;
+        post.tags = tags ? tags.map((t)=>t.toLowerCase().trim()):post.tags;
         post.difficulty = difficulty || post.difficulty;
         post.result = result || post.result;
         post.rounds = rounds || post.rounds;
@@ -202,6 +204,12 @@ const deletePost = async (req,res,next)=>{
 //adding upvote functionality
 const toggleUpvote = async (req,res,next)=>{
     try{
+
+        if(!req.user){
+            res.status(401);
+            throw new Error("Not authorized - please login to upvote");
+        }
+
         const post = await Post.findById(req.params.id);
 
         if(!post){

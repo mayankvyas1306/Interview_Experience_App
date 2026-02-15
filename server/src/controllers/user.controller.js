@@ -4,6 +4,12 @@ const User = require("../models/User");
 // save unsave post functionality
 const toggleSavePost = async(req,res,next)=>{
     try{
+
+        if(!req.user){
+            res.status(401);
+            throw new Error("Not authorized - please login to save posts");
+        }
+
         const postId = req.params.id;
 
         //check post exists
@@ -16,9 +22,15 @@ const toggleSavePost = async(req,res,next)=>{
 
         const user = await User.findById(req.user._id);
 
+        if(!user){
+            res.status(404);
+            throw new Error("User not found");
+        }
+
         const alreadySaved = user.savedPosts
-            .map((id)=> id.toString())
-            .includes(postId);
+            .some(
+                (id)=>id.toString()===postId.toString()
+            );
 
         if(alreadySaved){
             //remove from saved
@@ -28,14 +40,14 @@ const toggleSavePost = async(req,res,next)=>{
 
             await user.save();
 
-            return res.json({message: "Post removed from saved"});
+            return res.json({message: "Post removed from saved",saved:false});
         }
         else{
             //add to saved
             user.savedPosts.push(postId);
 
             await user.save();
-            return res.json({message: "Post saved Successfully"});
+            return res.json({message: "Post saved Successfully",saved:true});
         }
     }catch(err){
         next(err);
@@ -44,11 +56,26 @@ const toggleSavePost = async(req,res,next)=>{
 
 const getSavedPosts = async (req,res,next)=>{
     try{
-        const user = await User.findById(req.user._id).populate("savedPosts");
+        if(!req.user){
+            res.staus(401);
+            throw new Error("Not authorized - please login");
+        }
+        const user = await User.findById(req.user._id).populate({
+            path:"savedPosts",
+            populate:{
+                path:"authorId",
+                select:"fullName email college year",
+            },       
+        });
+
+        if(!user){
+            res.status(404);
+            throw new Error("User not found");
+        }
 
         res.json({
-            totalSaved: user.savedPosts.length,
-            savedPosts: user.savedPosts,
+            totalSaved: user.savedPosts?.length || 0,
+            savedPosts: user.savedPosts || [],
         });
     }catch(err){
         next(err);
@@ -56,4 +83,23 @@ const getSavedPosts = async (req,res,next)=>{
 };
 
 
-module.exports = { getSavedPosts,toggleSavePost}
+const getUserProfile = async(req,res,next)=>{
+    try{
+        if(!req.user){
+            res.status(401);
+            throw new Error("Not authorized");
+        }
+
+        const user = await User.findById(req.user._id).select("-password");
+        if(!user){
+            res.status(404);
+            throw new Error("User not found");
+        }
+
+        res.json({user});
+    }catch(err){
+        next(err);
+    }
+}
+
+module.exports = { getSavedPosts, toggleSavePost, getUserProfile}
