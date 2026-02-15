@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import {
   BarChart,
@@ -40,14 +40,14 @@ export default function AnalyticsPage() {
       res.data.mostAskedTopics.map((t: any) => ({
         name: t._id,
         value: t.count,
-      })),
+      }))
     );
 
     setTopCompanies(
       res.data.topCompanies.map((c: any) => ({
         name: c._id,
         value: c.count,
-      })),
+      }))
     );
   };
 
@@ -60,20 +60,21 @@ export default function AnalyticsPage() {
   const fetchCompanyTopics = async (company: string) => {
     if (!company) return;
     const res = await api.get(
-      `/analytics/company-topics?company=${encodeURIComponent(company)}`,
+      `/analytics/company-topics?company=${encodeURIComponent(company)}`
     );
 
     setCompanyTopics(
       res.data.topics.map((t: any) => ({
         name: t._id,
         value: t.count,
-      })),
+      }))
     );
   };
 
   const fetchTrending = async () => {
     const res = await api.get("/analytics/trending");
-    setTrending(res.data.trending);
+    // ✅ FIX: Only take top 5 trending posts
+    setTrending(res.data.trending.slice(0, 5));
   };
 
   // ---------------- EFFECTS ----------------
@@ -95,7 +96,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="container py-5">
-      <Toaster position="top-right" />
+      {/* ✅ FIX: Toaster removed - now in root layout */}
 
       {/* HEADER */}
       <motion.div
@@ -143,8 +144,7 @@ export default function AnalyticsPage() {
                 Number of interview posts where each topic appeared.
               </p>
 
-              {/* ✅ FIXED: Added explicit height */}
-              <div style={{ width: '100%', height: 260 }}>
+              <div style={{ width: "100%", height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={mostAskedTopics}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
@@ -165,8 +165,7 @@ export default function AnalyticsPage() {
                 Companies with highest interview activity.
               </p>
 
-              {/* ✅ FIXED: Added explicit height */}
-              <div style={{ width: '100%', height: 260 }}>
+              <div style={{ width: "100%", height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={topCompanies}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
@@ -201,9 +200,8 @@ export default function AnalyticsPage() {
               <p className="text-muted2 small">
                 Topics asked by a specific company.
               </p>
-              
-              {/* ✅ FIXED: Added explicit height */}
-              <div style={{ width: '100%', height: 260 }}>
+
+              <div style={{ width: "100%", height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={companyTopics}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
@@ -216,23 +214,57 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* TRENDING POSTS */}
+          {/* ✅ FIX: TRENDING POSTS - Only Top 5 */}
           <div className="col-lg-5">
             <div className="glass rounded-4 p-4 h-100">
-              <h5 className="fw-bold mb-3">Trending Posts 🔥</h5>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="fw-bold mb-0">Trending Posts 🔥</h5>
+                <span className="badge bg-secondary rounded-pill">
+                  Top {trending.length}
+                </span>
+              </div>
 
-              {trending.map((p: any) => (
-                <div key={p._id} className="glass rounded-4 p-3 mb-2">
-                  <div className="fw-semibold">{p.companyName}</div>
-                  <div className="text-muted2 small">{p.role}</div>
-                  <Link
-                    href={`/post/${p._id}`}
-                    className="btn btn-sm btn-outline-light mt-2"
-                  >
-                    View
-                  </Link>
+              {trending.length === 0 ? (
+                <div className="text-muted2 text-center py-4">
+                  No trending posts yet
                 </div>
-              ))}
+              ) : (
+                <div className="d-flex flex-column gap-2">
+                  {trending.map((p: any, index: number) => (
+                    <div key={p._id} className="glass rounded-4 p-3">
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                          <div className="fw-semibold">{p.companyName}</div>
+                          <div className="text-muted2 small">{p.role}</div>
+                        </div>
+                        <span className="badge bg-primary rounded-pill">
+                          #{index + 1}
+                        </span>
+                      </div>
+                      <div className="d-flex justify-content-between align-items-center">
+                        <div className="text-muted2 small">
+                          <i className="bi bi-arrow-up-circle me-1"></i>
+                          {p.upvotesCount} upvotes
+                        </div>
+                        <Link
+                          href={`/post/${p._id}`}
+                          className="btn btn-sm btn-outline-light rounded-3"
+                        >
+                          View
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* ✅ NEW: Link to explore more */}
+              <Link
+                href="/explore?sort=top"
+                className="btn btn-accent w-100 mt-3 rounded-3"
+              >
+                Explore All Trending Posts
+              </Link>
             </div>
           </div>
         </div>

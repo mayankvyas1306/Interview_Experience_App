@@ -25,7 +25,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try{
+        setUser(JSON.parse(storedUser));
+      }catch(error){
+        console.error("Failed to parse stored user:",error);
+        localStorage.clear();
+      }
     }
   }, []);
 
@@ -33,15 +38,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = (user: AuthUser) => {
     localStorage.setItem("user", JSON.stringify(user));
     localStorage.setItem("token", user.token);
+    localStorage.setItem("userId",user.id);
     setUser(user);
   };
 
   const logout = () => {
+
+    setUser(null);
+
     //clear all auth data from localStorage
     localStorage.clear();
 
-    //clear user state
-    setUser(null);
 
     //Redirect to login page
     //prevents showing blank page, gives clear next action

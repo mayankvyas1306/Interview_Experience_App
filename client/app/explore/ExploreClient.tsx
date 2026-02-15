@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import PostCard from "@/components/PostCard";
 import { api } from "@/lib/api";
 
@@ -51,12 +51,23 @@ export default function ExplorePage() {
     try {
       setLoading(true);
 
+      console.log("[EXPLORE] Fetching with query:", queryString);
+
       const res = await api.get(`/posts?${queryString}`);
+
+      console.log("[EXPLORE] Response:", {
+        totalPosts: res.data.totalPosts,
+        totalPages: res.data.totalPages,
+        currentPage: res.data.page,
+        limit: res.data.limit,
+        postsReceived: res.data.posts.length,
+      });
 
       setPosts(res.data.posts);
       setTotalPages(res.data.totalPages);
       setTotalPosts(res.data.totalPosts);
     } catch (err: any) {
+      console.error("[EXPLORE] Error:", err);
       toast.error(err?.response?.data?.message || "Failed to load posts");
     } finally {
       setLoading(false);
@@ -77,7 +88,7 @@ export default function ExplorePage() {
   // ✅ When filters change, reset to page 1
   const applyFilters = () => {
     setPage(1);
-    fetchPosts();
+    // fetchPosts will be triggered by queryString change
   };
 
   const clearFilters = () => {
@@ -90,7 +101,7 @@ export default function ExplorePage() {
 
   return (
     <div className="container py-5">
-      <Toaster position="top-right" />
+      {/* ✅ FIX: Toaster removed - now in root layout */}
 
       {/* Header */}
       <motion.div
@@ -108,7 +119,13 @@ export default function ExplorePage() {
           </div>
 
           <div className="text-muted2 small">
-            Total posts found: <span className="text-light fw-semibold">{totalPosts}</span>
+            {/* ✅ FIX: Better pagination info */}
+            <div>
+              Total posts: <span className="text-light fw-semibold">{totalPosts}</span>
+            </div>
+            <div>
+              Page {page} of {totalPages} (showing {posts.length})
+            </div>
           </div>
         </div>
       </motion.div>
@@ -218,33 +235,109 @@ export default function ExplorePage() {
                 ))}
               </div>
 
-              {/* Pagination */}
-              <div className="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2">
-                <div className="text-muted2 small">
-                  Page <span className="text-light fw-semibold">{page}</span> of{" "}
-                  <span className="text-light fw-semibold">{totalPages}</span>
-                </div>
+              {/* ✅ FIX: Better Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="glass rounded-4 p-4 mt-4">
+                  <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    {/* Page Info */}
+                    <div className="text-muted2">
+                      Page <span className="text-light fw-semibold">{page}</span> of{" "}
+                      <span className="text-light fw-semibold">{totalPages}</span>
+                      <span className="ms-2">
+                        (showing {posts.length} of {totalPosts})
+                      </span>
+                    </div>
 
-                <div className="d-flex gap-2">
-                  <button
-                    className="btn btn-outline-light rounded-3"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => p - 1)}
-                  >
-                    <i className="bi bi-arrow-left me-2"></i>
-                    Prev
-                  </button>
+                    {/* Pagination Buttons */}
+                    <div className="d-flex gap-2">
+                      <button
+                        className="btn btn-outline-light rounded-3"
+                        disabled={page <= 1 || loading}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      >
+                        <i className="bi bi-arrow-left me-2"></i>
+                        Prev
+                      </button>
 
-                  <button
-                    className="btn btn-outline-light rounded-3"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                  >
-                    Next
-                    <i className="bi bi-arrow-right ms-2"></i>
-                  </button>
+                      {/* Page Numbers (show current and neighbors) */}
+                      {totalPages <= 7 ? (
+                        // Show all pages if 7 or less
+                        Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                          <button
+                            key={p}
+                            className={`btn rounded-3 ${
+                              p === page
+                                ? "btn-accent"
+                                : "btn-outline-light"
+                            }`}
+                            onClick={() => setPage(p)}
+                            disabled={loading}
+                          >
+                            {p}
+                          </button>
+                        ))
+                      ) : (
+                        // Show smart pagination for many pages
+                        <>
+                          {page > 2 && (
+                            <>
+                              <button
+                                className="btn btn-outline-light rounded-3"
+                                onClick={() => setPage(1)}
+                                disabled={loading}
+                              >
+                                1
+                              </button>
+                              {page > 3 && <span className="text-muted2 align-self-center">...</span>}
+                            </>
+                          )}
+
+                          {[page - 1, page, page + 1]
+                            .filter((p) => p > 0 && p <= totalPages)
+                            .map((p) => (
+                              <button
+                                key={p}
+                                className={`btn rounded-3 ${
+                                  p === page
+                                    ? "btn-accent"
+                                    : "btn-outline-light"
+                                }`}
+                                onClick={() => setPage(p)}
+                                disabled={loading}
+                              >
+                                {p}
+                              </button>
+                            ))}
+
+                          {page < totalPages - 1 && (
+                            <>
+                              {page < totalPages - 2 && (
+                                <span className="text-muted2 align-self-center">...</span>
+                              )}
+                              <button
+                                className="btn btn-outline-light rounded-3"
+                                onClick={() => setPage(totalPages)}
+                                disabled={loading}
+                              >
+                                {totalPages}
+                              </button>
+                            </>
+                          )}
+                        </>
+                      )}
+
+                      <button
+                        className="btn btn-outline-light rounded-3"
+                        disabled={page >= totalPages || loading}
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      >
+                        Next
+                        <i className="bi bi-arrow-right ms-2"></i>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </div>

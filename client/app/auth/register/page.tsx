@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -69,7 +69,7 @@ export default function RegisterPage() {
 
   return (
     <div className="container py-5">
-      <Toaster position="top-right" />
+      
 
       <div className="row justify-content-center">
         <div className="col-md-8 col-lg-6">

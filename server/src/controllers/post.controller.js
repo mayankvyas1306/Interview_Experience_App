@@ -47,11 +47,13 @@ const getAllPosts = async (req,res,next)=>{
          * /api/posts?page=1&limit=5&company=amazon&difficulty=Hard&tag=DSA
          */
 
-        //pagination default
-        const page = Number(req.query.page) || 1;
-        const requestedLimit = Number(req.query.limit) || 10;
-        const limit = Math.min(requestedLimit, 50);
+        //pagination default- ensure proper parsing
+        const page = Math.max(1,Number(req.query.page) || 1);
+        const requestedLimit = Number(req.query.limit) || 9;
+        const limit = Math.min(Math.max(1,requestedLimit), 50);
         const skip = (page-1)*limit;
+
+        console.log(`[PAGINATION DEBUG] Page: ${page}, Limit: ${limit}, Skip: ${skip}`);
 
         //Filters object (MongoDB query)
         const filters = {};
@@ -95,7 +97,8 @@ const getAllPosts = async (req,res,next)=>{
             .populate("authorId", "fullName email college year") //show author details
             .sort(sortOption)
             .skip(skip)
-            .limit(limit);
+            .limit(limit)
+            .lean();
 
         //Total count for frontend pagination UI
         const totalPosts = await Post.countDocuments(filters);
@@ -217,7 +220,7 @@ const toggleUpvote = async (req,res,next)=>{
             post.upvotedBy = post.upvotedBy.filter(
                 (id)=>id.toString()!==userId
             );
-            post.upvotesCount = post.upvotesCount -1;
+            post.upvotesCount = Math.max(0,post.upvotesCount -1);
 
             await post.save();
             clearCacheByPrefix("analytics:");

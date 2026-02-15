@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import PostCard from "@/components/PostCard";
 import { useRouter } from "next/navigation";
@@ -35,7 +35,6 @@ export default function SavedPage() {
 
   return (
     <div className="container py-5">
-      <Toaster position="top-right" />
 
       <motion.div
         initial={{ opacity: 0, y: 14 }}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 
 type Round = {
@@ -177,8 +177,7 @@ export default function CreatePage() {
 
   return (
     <div className="container py-5">
-      <Toaster position="top-right" />
-
+      
       {/* HEADER */}
       <motion.div className="glass glow-border p-4 p-md-5 rounded-4 mb-4">
         <h2 className="fw-bold mb-1">Share Interview Experience ✨</h2>

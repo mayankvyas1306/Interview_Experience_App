@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 
 type Round = {
@@ -135,7 +135,7 @@ export default function PostDetailsPage() {
   if (loading) {
     return (
       <div className="container py-5 text-center text-muted2">
-        <Toaster position="top-right" />
+        
         <div className="spinner-border text-light"></div>
         <div className="mt-3">Loading post...</div>
       </div>
@@ -145,7 +145,7 @@ export default function PostDetailsPage() {
   if (!post) {
     return (
       <div className="container py-5 text-center text-muted2">
-        <Toaster position="top-right" />
+        
         Post not found
       </div>
     );
@@ -153,7 +153,6 @@ export default function PostDetailsPage() {
 
   return (
     <div className="container py-5">
-      <Toaster position="top-right" />
 
       {/* ✅ Header Card */}
       <motion.div
