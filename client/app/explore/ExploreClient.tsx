@@ -9,17 +9,23 @@ import { api } from "@/lib/api";
 
 const TAGS = ["DSA", "DBMS", "OS", "CN", "OOP", "System Design", "Aptitude"];
 
+const normalizeSort = (raw: string | null) => {
+  if (!raw) return "latest";
+  if (raw === "top" || raw === "trending") return "top";
+  return "latest";
+};
+
 export default function ExplorePage() {
   const searchParams = useSearchParams();
+
   const companyFromUrl = searchParams.get("company") || "";
+  const sortFromUrl = normalizeSort(searchParams.get("sort"));
 
   const [company, setCompany] = useState(companyFromUrl);
   const [difficulty, setDifficulty] = useState("");
   const [tag, setTag] = useState("");
-  const [sort, setSort] = useState("latest");
+  const [sort, setSort] = useState<"latest" | "top">(sortFromUrl);
   const [page, setPage] = useState(1);
-
-  // Fixed page size for Explore
   const limit = 6;
 
   const [posts, setPosts] = useState<any[]>([]);
@@ -58,8 +64,9 @@ export default function ExplorePage() {
 
   useEffect(() => {
     setCompany(companyFromUrl);
+    setSort(sortFromUrl as "latest" | "top");
     setPage(1);
-  }, [companyFromUrl]);
+  }, [companyFromUrl, sortFromUrl]);
 
   const clearFilters = () => {
     setCompany("");
@@ -97,12 +104,7 @@ export default function ExplorePage() {
 
       <div className="row g-4">
         <div className="col-lg-3">
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.05 }}
-            className="glass rounded-4 p-4"
-          >
+          <div className="glass rounded-4 p-4">
             <h5 className="fw-bold mb-3">Filters</h5>
 
             <div className="mb-3">
@@ -135,15 +137,12 @@ export default function ExplorePage() {
               </select>
             </div>
 
-            {/* Improved tag filter: always editable + suggestions */}
             <div className="mb-3">
-              <label className="form-label text-muted2">
-                Tag <span className="ms-1 small">(type partial/full)</span>
-              </label>
+              <label className="form-label text-muted2">Tag</label>
               <input
                 list="tag-suggestions"
                 className="form-control bg-transparent text-light border-secondary"
-                placeholder="e.g. DSA or System"
+                placeholder="Type full or partial tag"
                 value={tag}
                 onChange={(e) => {
                   setTag(e.target.value);
@@ -155,22 +154,6 @@ export default function ExplorePage() {
                   <option key={t} value={t} />
                 ))}
               </datalist>
-
-              <div className="d-flex flex-wrap gap-1 mt-2">
-                {TAGS.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    className="btn btn-sm btn-outline-light rounded-pill"
-                    onClick={() => {
-                      setTag(t);
-                      setPage(1);
-                    }}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
             </div>
 
             <div className="mb-3">
@@ -179,7 +162,7 @@ export default function ExplorePage() {
                 className="form-select bg-transparent text-light border-secondary"
                 value={sort}
                 onChange={(e) => {
-                  setSort(e.target.value);
+                  setSort(e.target.value as "latest" | "top");
                   setPage(1);
                 }}
               >
@@ -191,7 +174,7 @@ export default function ExplorePage() {
             <button onClick={clearFilters} className="btn btn-outline-light w-100 rounded-3">
               Clear Filters
             </button>
-          </motion.div>
+          </div>
         </div>
 
         <div className="col-lg-9">
@@ -203,8 +186,7 @@ export default function ExplorePage() {
           ) : posts.length === 0 ? (
             <div className="glass rounded-4 p-5 text-center">
               <h4 className="fw-bold">No posts found</h4>
-              <p className="text-muted2 mb-3">Try changing filters.</p>
-              <button onClick={clearFilters} className="btn btn-accent rounded-3">
+              <button onClick={clearFilters} className="btn btn-accent rounded-3 mt-2">
                 Clear All Filters
               </button>
             </div>
@@ -219,11 +201,10 @@ export default function ExplorePage() {
               </div>
 
               {totalPages > 1 && (
-                <div className="glass rounded-4 p-4 mt-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
-                  <div className="text-muted2">
-                    Page <span className="text-light fw-semibold">{page}</span> of{" "}
-                    <span className="text-light fw-semibold">{totalPages}</span>
-                  </div>
+                <div className="glass rounded-4 p-4 mt-4 d-flex justify-content-between align-items-center">
+                  <span className="text-muted2">
+                    Page {page} of {totalPages}
+                  </span>
                   <div className="d-flex gap-2">
                     <button
                       className="btn btn-outline-light rounded-3"

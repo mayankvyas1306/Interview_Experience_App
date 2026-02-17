@@ -100,6 +100,7 @@ const getAllPosts = async (req, res, next) => {
 
     if (req.query.sort === "top") {
       sortOption = { upvotesCount: -1, createdAt: -1 };
+      filters.upvotesCount = {$gt:0};
     }
 
     //fetch posts from DB

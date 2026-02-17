@@ -95,7 +95,10 @@ export default function PostCard({ post }: { post: Post }) {
       const res = await api.patch(`/users/save/${post._id}`);
       const nowSaved = res.data.saved;
       setIsSaved(nowSaved);
-      toast.success(res.data.message, { icon: nowSaved ? "⭐" : "📌", duration: 1500 });
+      toast.success(res.data.message, {
+        icon: nowSaved ? "⭐" : "📌",
+        duration: 1500,
+      });
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Save failed");
     } finally {
@@ -170,6 +173,14 @@ export default function PostCard({ post }: { post: Post }) {
         {post.authorId?.college && (
           <span className="ms-1">• {post.authorId.college}</span>
         )}
+        <div className="mt-1">
+          <i className="bi bi-calendar-event me-1"></i>
+          {new Date(post.createdAt).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })}
+        </div>
       </div>
 
       {/* Spacer */}
@@ -205,7 +216,9 @@ export default function PostCard({ post }: { post: Post }) {
             {saving ? (
               <span className="spinner-border spinner-border-sm"></span>
             ) : (
-              <i className={`bi ${isSaved ? "bi-bookmark-fill" : "bi-bookmark"}`}></i>
+              <i
+                className={`bi ${isSaved ? "bi-bookmark-fill" : "bi-bookmark"}`}
+              ></i>
             )}
           </button>
         </div>

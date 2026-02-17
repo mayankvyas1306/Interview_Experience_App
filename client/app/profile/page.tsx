@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -14,6 +15,8 @@ export default function ProfilePage() {
   const [savedPosts, setSavedPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [myPosts, setMyPosts] = useState<any[]>([]);
+  const [myPostsLoading, setMyPostsLoading] = useState(false);
 
   const fetchProfile = async () => {
     try {
@@ -22,10 +25,16 @@ export default function ProfilePage() {
       const profileRes = await api.get("/auth/me");
       setUser(profileRes.data.user);
 
-      // ✅ fetch saved count
-      const savedRes = await api.get("/users/saved");
+      setMyPostsLoading(true);
+      const [savedRes, myPostsRes] = await Promise.all([
+        api.get("/users/saved"),
+        api.get("/users/my-posts?page=1&limit=6"),
+      ]);
+
       setSavedCount(savedRes.data.totalSaved);
       setSavedPosts(savedRes.data.savedPosts || []);
+      setMyPosts(myPostsRes.data.posts || []);
+      setMyPostsLoading(false);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Please login again");
       router.push("/auth/login");
@@ -47,7 +56,9 @@ export default function ProfilePage() {
       setSavedPosts(savedRes.data.savedPosts || []);
       toast.success("Saved list updated ✅");
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to update saved list");
+      toast.error(
+        err?.response?.data?.message || "Failed to update saved list",
+      );
     } finally {
       setSavingId(null);
     }
@@ -55,7 +66,6 @@ export default function ProfilePage() {
 
   return (
     <div className="container py-5">
-
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -104,7 +114,8 @@ export default function ProfilePage() {
               <div className="text-muted2">
                 <div className="mb-2">
                   <i className="bi bi-mortarboard me-2"></i>
-                  College: <span className="text-light">{user.college || "N/A"}</span>
+                  College:{" "}
+                  <span className="text-light">{user.college || "N/A"}</span>
                 </div>
                 <div className="mb-2">
                   <i className="bi bi-calendar3 me-2"></i>
@@ -139,7 +150,8 @@ export default function ProfilePage() {
                 <div className="glass rounded-4 p-4">
                   <h5 className="fw-bold">Next Goal 🚀</h5>
                   <p className="text-muted2 mb-0">
-                    Share 3 interview experiences and help 50+ students prepare better.
+                    Share 3 interview experiences and help 50+ students prepare
+                    better.
                   </p>
                 </div>
               </div>
@@ -157,12 +169,15 @@ export default function ProfilePage() {
                   </p>
                 </div>
                 <div className="text-muted2 small">
-                  Total saved: <span className="text-light fw-semibold">{savedCount}</span>
+                  Total saved:{" "}
+                  <span className="text-light fw-semibold">{savedCount}</span>
                 </div>
               </div>
 
               {savedPosts.length === 0 ? (
-                <div className="text-muted2">No saved posts yet. Explore and save your favorites!</div>
+                <div className="text-muted2">
+                  No saved posts yet. Explore and save your favorites!
+                </div>
               ) : (
                 <div className="row g-3">
                   {savedPosts.map((post) => (
@@ -189,6 +204,60 @@ export default function ProfilePage() {
                           >
                             View Post
                           </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="col-12">
+            <div className="glass rounded-4 p-4">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <h5 className="fw-bold mb-1">My Created Posts</h5>
+                  <p className="text-muted2 mb-0">
+                    Posts you authored. You can edit them.
+                  </p>
+                </div>
+                <span className="text-muted2 small">
+                  Total: {myPosts.length}
+                </span>
+              </div>
+
+              {myPostsLoading ? (
+                <div className="text-muted2">Loading your posts...</div>
+              ) : myPosts.length === 0 ? (
+                <div className="text-muted2">
+                  You have not created any posts yet.
+                </div>
+              ) : (
+                <div className="row g-3">
+                  {myPosts.map((post) => (
+                    <div key={post._id} className="col-md-6 col-xl-4">
+                      <div className="glass rounded-4 p-4 h-100">
+                        <h6 className="fw-bold mb-1">{post.companyName}</h6>
+                        <div className="text-muted2 small mb-2">
+                          {post.role}
+                        </div>
+                        <div className="text-muted2 small mb-3">
+                          {new Date(post.createdAt).toLocaleDateString()}
+                        </div>
+                        <div className="d-flex gap-2">
+                          <Link
+                            href={`/post/${post._id}`}
+                            className="btn btn-outline-light btn-sm"
+                          >
+                            View
+                          </Link>
+                          <Link
+                            href={`/edit/${post._id}`}
+                            className="btn btn-accent btn-sm"
+                          >
+                            Edit
+                          </Link>
                         </div>
                       </div>
                     </div>

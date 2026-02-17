@@ -102,4 +102,36 @@ const getUserProfile = async(req,res,next)=>{
     }
 }
 
-module.exports = { getSavedPosts, toggleSavePost, getUserProfile}
+const getMyPosts = async(req,res,next)=>{
+    try{
+        if(!req.user){
+            res.status(401);
+            throw new Error("Not authorized - please login");
+        }
+        const page = Math.max(1,Number(req.query.page) ||1 );
+        const requestedLimit = Number(req.query.limit) || 6;
+        const limit = Math.min(Math.max(1,requestedLimit),50);
+        const skip = (page - 1)*limit;
+
+        const filters = { authorId: req.user._id};
+
+        const [posts, totalPosts] = await Promise.all([
+            Post.find(filters)
+                .populate("authorId","fullName email college year")
+                .sort({createdAt:-1})
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Post.countDocuments(filters),
+        ]);
+
+        res.json({
+            page,limit,totalPosts,totalPages:Math.ceil(totalPosts/limit),posts,
+        });
+
+    }catch(err){
+        next(err);
+    }
+};
+
+module.exports = { getSavedPosts, toggleSavePost, getUserProfile, getMyPosts}

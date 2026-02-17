@@ -145,7 +145,7 @@ export default function Home() {
 
           <div className="col-md-4">
             <Link
-              href="/explore?sort=trending"
+              href="/explore?sort=top"
               className="text-decoration-none"
             >
               <div className="glass rounded-4 p-4 h-100 card-hover">

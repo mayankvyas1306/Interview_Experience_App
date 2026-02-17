@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import toast from "react-hot-toast"; // ✅ FIX: No Toaster import - handled by root layout
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
 
 type Round = {
   roundName: string;
@@ -70,6 +71,9 @@ export default function PostDetailsPage() {
   const [saving, setSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
+  const isOwner =
+    !!user && !!post?.authorId && user.id === (post.authorId as any)._id;
+
   // ─────────────────────────────────────────────
   // LOAD POST + COMMENTS
   // ─────────────────────────────────────────────
@@ -97,7 +101,9 @@ export default function PostDetailsPage() {
     };
 
     loadData();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [postId]);
 
   // Check if current post is saved (when user is logged in)
@@ -132,7 +138,7 @@ export default function PostDetailsPage() {
       const res = await api.patch(`/posts/${postId}/upvote`);
       toast.success(res.data.message);
       setPost((prev) =>
-        prev ? { ...prev, upvotesCount: res.data.upvotesCount } : prev
+        prev ? { ...prev, upvotesCount: res.data.upvotesCount } : prev,
       );
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Upvote failed");
@@ -295,6 +301,14 @@ export default function PostDetailsPage() {
               )}
               Upvote ({post.upvotesCount})
             </button>
+            {isOwner && (
+              <Link
+                href={`/edit/${post._id}`}
+                className="btn btn-accent rounded-3"
+              >
+                <i className="bi bi-pencil-square me-2"></i>Edit Post
+              </Link>
+            )}
 
             <button
               onClick={handleSave}
@@ -305,7 +319,9 @@ export default function PostDetailsPage() {
               {saving ? (
                 <span className="spinner-border spinner-border-sm me-2"></span>
               ) : (
-                <i className={`bi ${isSaved ? "bi-bookmark-fill" : "bi-bookmark-star"} me-2`}></i>
+                <i
+                  className={`bi ${isSaved ? "bi-bookmark-fill" : "bi-bookmark-star"} me-2`}
+                ></i>
               )}
               {isSaved ? "Saved" : "Save"}
             </button>
@@ -411,7 +427,10 @@ export default function PostDetailsPage() {
                   <i className="bi bi-lock me-2"></i>
                   Please login to comment
                 </p>
-                <a href="/auth/login" className="btn btn-sm btn-accent rounded-3">
+                <a
+                  href="/auth/login"
+                  className="btn btn-sm btn-accent rounded-3"
+                >
                   Login to Comment
                 </a>
               </div>
