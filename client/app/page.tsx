@@ -17,14 +17,14 @@ export default function Home() {
       try {
         const [overviewRes, trendingRes] = await Promise.all([
           api.get("/analytics/overview"),
-          api.get("/analytics/trending"),
+          api.get("/analytics/trending-stats"),
         ]);
 
         setRadar({
           topTopic: overviewRes.data.mostAskedTopics?.[0]?._id || "—",
           trendingCompany: overviewRes.data.topCompanies?.[0]?._id || "—",
           mostSaved:
-            trendingRes.data.trending?.[0]?.tags?.slice(0, 2).join(" + ") ||
+            trendingRes.data.trendingPosts?.[0]?.tags?.slice(0, 2).join(" + ") ||
             "—",
         });
       } catch (error) {

@@ -8,7 +8,9 @@ connectDB();
 
 const PORT = env.PORT || 5000;
 
-app.listen(PORT,()=>{
-    console.log(`Server running on port ${PORT}`);
-    
+const logger = require("./utils/logger");
+
+app.listen(PORT, () => {
+    logger.info(`Server running on port ${PORT}`);
+
 });

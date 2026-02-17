@@ -1,5 +1,6 @@
 const Post = require("../models/Post");
 const { clearCacheByPrefix } = require("../utils/cache");
+const AppError = require("../utils/AppError");
 
 const escapeRegex = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -8,24 +9,6 @@ const escapeRegex = (value = "") =>
 const createPost = async (req, res, next) => {
   try {
     const { companyName, role, tags, difficulty, result, rounds } = req.body;
-
-    if (!companyName || !role) {
-      res.status(400);
-      throw new Error("Company name and role are required");
-    }
-
-    //adding extra safety validations
-    const allowedDifficulties = ["Easy", "Medium", "Hard"];
-    if (difficulty && !allowedDifficulties.includes(difficulty)) {
-      res.status(400);
-      throw new Error("Invalid difficulty value");
-    }
-
-    const allowedResults = ["Selected", "Rejected", "Waiting"];
-    if (result && !allowedResults.includes(result)) {
-      res.status(400);
-      throw new Error("Invalid result value");
-    }
 
     const post = await Post.create({
       authorId: req.user._id, //coming from protect middleware
@@ -47,44 +30,29 @@ const createPost = async (req, res, next) => {
 // get all posts (search + filters + pagination)
 const getAllPosts = async (req, res, next) => {
   try {
-    /**
-     * /api/posts?page=1&limit=5&company=amazon&difficulty=Hard&tag=DSA
-     */
-
-    //pagination default- ensure proper parsing
     const page = Math.max(1, Number(req.query.page) || 1);
     const requestedLimit = Number(req.query.limit) || 6;
     const limit = Math.min(Math.max(1, requestedLimit), 50);
     const skip = (page - 1) * limit;
 
-    console.log(
-      `[PAGINATION DEBUG] Page: ${page}, Limit: ${limit}, Skip: ${skip}`,
-    );
-
-    //Filters object (MongoDB query)
     const filters = {};
 
-    //Search by Company name (case-insensitive)
     if (req.query.company) {
       filters.companyName = { $regex: req.query.company, $options: "i" };
     }
 
-    //filter by role
     if (req.query.role) {
       filters.role = { $regex: req.query.role, $options: "i" };
     }
 
-    //filter by difficulty
     if (req.query.difficulty) {
       filters.difficulty = req.query.difficulty;
     }
 
-    //filter by result
     if (req.query.result) {
       filters.result = req.query.result;
     }
 
-    //filter by tag(single tag for now)
     if (req.query.tag) {
       const rawTag = String(req.query.tag).trim();
       if (rawTag) {
@@ -93,25 +61,20 @@ const getAllPosts = async (req, res, next) => {
       }
     }
 
-    //sort options
-    //latest = newest first
-    //top = most upvotes first
     let sortOption = { createdAt: -1 };
 
     if (req.query.sort === "top") {
       sortOption = { upvotesCount: -1, createdAt: -1 };
-      filters.upvotesCount = {$gt:0};
+      filters.upvotesCount = { $gt: 0 };
     }
 
-    //fetch posts from DB
     const posts = await Post.find(filters)
-      .populate("authorId", "fullName email college year") //show author details
+      .populate("authorId", "fullName email college year")
       .sort(sortOption)
       .skip(skip)
       .limit(limit)
       .lean();
 
-    //Total count for frontend pagination UI
     const totalPosts = await Post.countDocuments(filters);
 
     res.json({
@@ -135,8 +98,7 @@ const getPostById = async (req, res, next) => {
     );
 
     if (!post) {
-      res.status(404);
-      throw new Error("Post not Found");
+      throw new AppError("Post not Found", 404);
     }
 
     res.json({ post });
@@ -153,17 +115,13 @@ const updatePost = async (req, res, next) => {
     const post = await Post.findById(req.params.id);
 
     if (!post) {
-      res.status(404);
-      throw new Error("Post not found");
+      throw new AppError("Post not found", 404);
     }
 
-    //ownership check (only author can edit)
     if (post.authorId.toString() !== req.user._id.toString()) {
-      res.status(403);
-      throw new Error("You are not allowed to update this post");
+      throw new AppError("You are not allowed to update this post", 403);
     }
 
-    //company only if values are sent
     post.companyName = companyName || post.companyName;
     post.role = role || post.role;
     post.tags = tags ? tags.map((t) => t.toLowerCase().trim()) : post.tags;
@@ -188,19 +146,15 @@ const deletePost = async (req, res, next) => {
     const post = await Post.findById(req.params.id);
 
     if (!post) {
-      res.status(404);
-      throw new Error("Post not Found");
+      throw new AppError("Post not Found", 404);
     }
 
-    //ownership check
     if (post.authorId.toString() !== req.user._id.toString()) {
-      res.status(403);
-      throw new Error("You are not allowed to delete this post");
+      throw new AppError("You are not allowed to delete this post", 403);
     }
 
     await Post.deleteOne({ _id: post._id });
     clearCacheByPrefix("analytics:");
-
     clearCacheByPrefix("analytics:");
 
     res.json({ message: "Post deleted Successfully " });
@@ -209,35 +163,29 @@ const deletePost = async (req, res, next) => {
   }
 };
 
-//adding upvote functionality
 const toggleUpvote = async (req, res, next) => {
   try {
     if (!req.user) {
-      res.status(401);
-      throw new Error("Not authorized - please login to upvote");
+      throw new AppError("Not authorized - please login to upvote", 401);
     }
 
     const post = await Post.findById(req.params.id);
 
     if (!post) {
-      res.status(404);
-      throw new Error("Post not Found");
+      throw new AppError("Post not Found", 404);
     }
     const userId = req.user._id.toString();
 
-    //check if user already upvoted
     const alreadyUpvoted = post.upvotedBy
       .map((id) => id.toString())
       .includes(userId);
 
     if (alreadyUpvoted) {
-      //remove upvote
       post.upvotedBy = post.upvotedBy.filter((id) => id.toString() !== userId);
       post.upvotesCount = Math.max(0, post.upvotesCount - 1);
 
       await post.save();
       clearCacheByPrefix("analytics:");
-
       clearCacheByPrefix("analytics:");
 
       return res.json({
@@ -245,7 +193,6 @@ const toggleUpvote = async (req, res, next) => {
         upvotesCount: post.upvotesCount,
       });
     } else {
-      //add upvote
       post.upvotedBy.push(req.user._id);
       post.upvotesCount = post.upvotesCount + 1;
 

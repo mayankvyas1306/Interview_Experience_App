@@ -1,20 +1,15 @@
 const User = require("../models/User");
 const { clearAuthCookie, setAuthCookie } = require("../utils/authCookies");
 const generateToken = require("../utils/generateToken");
+const AppError = require("../utils/AppError");
 
 const registerUser = async (req, res, next) => {
   try {
     const { fullName, email, password, college, year } = req.body;
 
-    if (!fullName || !email || !password) {
-      res.status(400);
-      throw new Error("Full name, email, and password are required");
-    }
-
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      res.status(400);
-      throw new Error("User already exist with email");
+      throw new AppError("User already exist with email", 400);
     }
 
     const user = await User.create({
@@ -25,11 +20,9 @@ const registerUser = async (req, res, next) => {
       year: year,
     });
 
-    const token = generateToken(user._id); 
-    console.log("Token is ",token);
+    const token = generateToken(user._id);
 
     setAuthCookie(res, token);
-    
 
     res.status(201).json({
       message: "Registered Successfully",
@@ -52,25 +45,18 @@ const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      res.status(400);
-      throw new Error("Email and password are required");
-    }
     const user = await User.findOne({ email });
 
     if (!user) {
-      res.status(401);
-      throw new Error("Invalid email or password");
+      throw new AppError("Invalid email or password", 401);
     }
 
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
-      res.status(401);
-      throw new Error("Invalid email or Password");
+      throw new AppError("Invalid email or Password", 401);
     }
 
-    const token=generateToken(user._id);
-    console.log(token);
+    const token = generateToken(user._id);
 
     setAuthCookie(res, token);
 
@@ -85,14 +71,11 @@ const loginUser = async (req, res, next) => {
         role: user.role,
       },
       token: token,
-      
-      
     });
   } catch (err) {
     next(err);
   }
 };
-
 
 const getMe = async (req, res, next) => {
   try {

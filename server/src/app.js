@@ -3,8 +3,9 @@ const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require("helmet");
 const { env } = require("./config/env");
+const logger = require("./utils/logger");
 
-const app =express();
+const app = express();
 
 const authRoutes = require('./routes/auth.routes');
 const postRoutes = require('./routes/post.routes');
@@ -33,8 +34,10 @@ app.use(
 );//used to connect frontend or authorize frontend to access the backend
 app.use(express.json());// Converts incoming JSON payloads into req.body object
 
-if(env.NODE_ENV === "development"){
-app.use(morgan("dev"));//used to log each request used for debugging
+if (env.NODE_ENV === "development") {
+    app.use(morgan("dev", { stream: logger.stream }));
+} else {
+    app.use(morgan("combined", { stream: logger.stream }));
 }
 
 /**
@@ -62,19 +65,19 @@ app.use(globalLimiter);
  * - Admin: Lenient (admins need flexibility for bulk operations)
  */
 
-app.use('/api/auth',authLimiter,authRoutes);
-app.use("/api/posts",apiLimiter,postRoutes);
-app.use("/api/users",apiLimiter,userRoutes);
-app.use("/api/comments",apiLimiter,commentRoutes);
-app.use("/api/analytics",analyticsRoutes);
-app.use("/api/admin",adminLimiter,adminRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
+app.use("/api/posts", apiLimiter, postRoutes);
+app.use("/api/users", apiLimiter, userRoutes);
+app.use("/api/comments", apiLimiter, commentRoutes);
+app.use("/api/analytics", analyticsRoutes);
+app.use("/api/admin", adminLimiter, adminRoutes);
 
-app.get("/health",(req,res)=>{
+app.get("/health", (req, res) => {
     res.json({ status: "ok" });
 });
 
-app.get('/',(req,res)=>{
-    res.json({message:"Backend is running "});
+app.get('/', (req, res) => {
+    res.json({ message: "Backend is running " });
 });
 
 app.use(notFound);

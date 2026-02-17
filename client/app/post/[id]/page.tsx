@@ -124,6 +124,9 @@ export default function PostDetailsPage() {
   // ─────────────────────────────────────────────
   // UPVOTE  – ✅ FIX: Redirect to login instead of just toasting
   // ─────────────────────────────────────────────
+  // ─────────────────────────────────────────────
+  // UPVOTE  – ✅ FIX: Redirect to login instead of just toasting
+  // ─────────────────────────────────────────────
   const handleUpvote = async () => {
     if (!user) {
       toast.error("Please login to upvote");
@@ -131,16 +134,38 @@ export default function PostDetailsPage() {
       return;
     }
 
-    if (upvoting) return;
+    if (upvoting || !post) return;
+
+    // OPTIMISTIC UPDATE
+    const previousPost = { ...post };
+    const userId = user.id;
+    const isUpvoted = post.upvotedBy?.includes(userId);
+
+    const newUpvotesCount = isUpvoted ? Math.max(0, post.upvotesCount - 1) : post.upvotesCount + 1;
+    const newUpvotedBy = isUpvoted
+      ? post.upvotedBy?.filter(id => id !== userId) || []
+      : [...(post.upvotedBy || []), userId];
+
+    // Apply optimistic state
+    setPost({
+      ...post,
+      upvotesCount: newUpvotesCount,
+      upvotedBy: newUpvotedBy
+    });
 
     try {
       setUpvoting(true);
+      // API call in background
       const res = await api.patch(`/posts/${postId}/upvote`);
-      toast.success(res.data.message);
+
+      // Update with actual server response (eventually consistent)
       setPost((prev) =>
-        prev ? { ...prev, upvotesCount: res.data.upvotesCount } : prev,
+        prev ? { ...prev, upvotesCount: res.data.upvotesCount, upvotedBy: isUpvoted ? prev.upvotedBy?.filter(id => id !== userId) : [...(prev.upvotedBy || []), userId] } : prev,
       );
+      toast.success(res.data.message);
     } catch (err: any) {
+      // Revert on failure
+      setPost(previousPost);
       toast.error(err?.response?.data?.message || "Upvote failed");
     } finally {
       setUpvoting(false);
