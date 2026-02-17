@@ -1,18 +1,33 @@
 const express = require("express");
-const { getOverviewAnalytics, getCompanyTopicsAnalytics, getTrendingPosts, getCompaniesList } = require("../controllers/analytics.controller");
+const { protect } = require("../middlewares/auth.middleware");
+const {
+    getOverviewAnalytics,
+    getCompanyStats,
+    getTopicAnalytics,
+    getTrendingStats,
+    getUserAnalytics,
+    getCompaniesList
+} = require("../controllers/analytics.controller");
+
 const router = express.Router();
 
 
-//overview dashboard
-router.get("/overview",getOverviewAnalytics);
+// 1. Overview Dashboard
+router.get("/overview", getOverviewAnalytics);
 
-//company  wise topic analytics 
-router.get("/company-topics",getCompanyTopicsAnalytics);
+// 2. Company Insights (Advanced)
+router.get("/company-stats", getCompanyStats);
 
-//trending posts
-router.get("/trending",getTrendingPosts);
+// 3. Topic Frequency Analytics
+router.get("/topic-analytics", getTopicAnalytics);
 
-//company list
-router.get("/companies",getCompaniesList);
+// 4. Trending Stats
+router.get("/trending-stats", getTrendingStats);
+
+// 5. User Stats (Protected)
+router.get("/user-stats", protect, getUserAnalytics);
+
+// 6. Company List for Dropdown
+router.get("/companies", getCompaniesList);
 
 module.exports = router;
