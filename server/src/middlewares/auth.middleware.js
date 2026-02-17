@@ -41,8 +41,8 @@ const protect = async (req, res, next) => {
 
     next();
   } catch (err) {
-    res.status(401);
-    throw new Error("Not authorized, invalid Token");
+    if(!res.statusCode || res.statusCode===200) res.status(401);
+    next(err);
   }
 };
 

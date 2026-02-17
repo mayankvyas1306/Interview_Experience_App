@@ -12,11 +12,11 @@ const router = express.Router();
 router.get("/",getAllPosts);
 
 //create post (protected)
-router.post("/",protect,validateBody(createPostSchema),protect,createPost);
+router.post("/",protect,validateBody(createPostSchema),createPost);
 
 //single post routes
 router.get("/:id",getPostById);
-router.put("/:id",protect,validateBody(updatePostSchema),protect,updatePost);
+router.put("/:id",protect,validateBody(updatePostSchema),updatePost);
 router.delete("/:id",protect,deletePost);
 
 //upvote route

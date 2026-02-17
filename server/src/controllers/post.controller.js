@@ -66,7 +66,7 @@ const getAllPosts = async (req,res,next)=>{
 
         //filter by role
         if(req.query.role){
-            filters.role = { $regex: req.query, $options: "i"};
+            filters.role = { $regex: req.query.role, $options: "i"};
         }
 
         //filter by difficulty

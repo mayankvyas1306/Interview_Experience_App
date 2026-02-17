@@ -10,7 +10,7 @@ const toggleSavePost = async(req,res,next)=>{
             throw new Error("Not authorized - please login to save posts");
         }
 
-        const postId = req.params.id;
+        const postId = req.params.postId;
 
         //check post exists
         const postExists = await Post.findById(postId);
@@ -57,7 +57,7 @@ const toggleSavePost = async(req,res,next)=>{
 const getSavedPosts = async (req,res,next)=>{
     try{
         if(!req.user){
-            res.staus(401);
+            res.status(401);
             throw new Error("Not authorized - please login");
         }
         const user = await User.findById(req.user._id).populate({

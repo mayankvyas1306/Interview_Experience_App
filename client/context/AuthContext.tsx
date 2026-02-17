@@ -1,5 +1,6 @@
 "use client";
 
+import { api } from "@/lib/api";
 import { createContext, useContext, useEffect, useState } from "react";
 
 type AuthUser = {
@@ -42,8 +43,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(user);
   };
 
-  const logout = () => {
-
+  const logout = async() => {
+    try{
+      await api.post("/auth/logout");
+    }catch{}
     setUser(null);
 
     //clear all auth data from localStorage

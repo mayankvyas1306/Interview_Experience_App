@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.get("/me",protect,getUserProfile);
 router.get("/saved",protect,getSavedPosts)
-router.get("/save/:postId",protect,toggleSavePost);
+router.patch("/save/:postId",protect,toggleSavePost);
 
 module.exports = router;
