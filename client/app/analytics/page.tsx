@@ -374,7 +374,7 @@ export default function AnalyticsPage() {
       <div className="text-center py-5 glass rounded-4">
         <h3>Please Login</h3>
         <p className="text-muted2">You need to be logged in to view your contribution stats.</p>
-        <Link href="/login" className="btn btn-primary rounded-pill mt-2">Login Now</Link>
+        <Link href="/auth/login" className="btn btn-primary rounded-pill mt-2">Login Now</Link>
       </div>
     );
 

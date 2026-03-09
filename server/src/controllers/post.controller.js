@@ -1,7 +1,7 @@
 const Post = require("../models/Post");
 const { clearCacheByPrefix } = require("../utils/cache");
 const AppError = require("../utils/AppError");
-
+const Upvote = require("../models/Upvote")
 const escapeRegex = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -27,22 +27,26 @@ const createPost = async (req, res, next) => {
   }
 };
 
-// get all posts (search + filters + pagination)
+// get all posts 
+//Supports Cursor based pagination
+//Query Params:
+// cursor = last post _id(for infinite scroll)
+// limit = number of posts (default 6, max 50)
+// company , role, difficulty, tag, sort = filters
+// page = still supported for admin/backward compat
 const getAllPosts = async (req, res, next) => {
   try {
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const requestedLimit = Number(req.query.limit) || 6;
-    const limit = Math.min(Math.max(1, requestedLimit), 50);
-    const skip = (page - 1) * limit;
 
+    const limit = Math.min(Math.max(1, Number(req.query.limit) || 6), 50);
     const filters = {};
 
+    // Filters
     if (req.query.company) {
-      filters.companyName = { $regex: req.query.company, $options: "i" };
+      filters.companyName = { $regex: escapeRegex(String(req.query.company)), $options: "i" };
     }
 
     if (req.query.role) {
-      filters.role = { $regex: req.query.role, $options: "i" };
+      filters.role = { $regex: escapeRegex(String(req.query.role)), $options: "i" };
     }
 
     if (req.query.difficulty) {
@@ -56,16 +60,53 @@ const getAllPosts = async (req, res, next) => {
     if (req.query.tag) {
       const rawTag = String(req.query.tag).trim();
       if (rawTag) {
-        const tagRegex = new RegExp(escapeRegex(rawTag), "i");
-        filters.tags = { $elemMatch: { $regex: tagRegex } };
+        filters.tags = { $elemMatch: { $regex: new RegExp(escapeRegex(rawTag), "i") } };
       }
     }
 
+    //sort
     let sortOption = { createdAt: -1 };
-
     if (req.query.sort === "top") {
       sortOption = { upvotesCount: -1, createdAt: -1 };
       filters.upvotesCount = { $gt: 0 };
+    }
+
+    //cursor based pagination(for infinite scroll)
+    if (req.query.cursor) {
+      try {
+        const cursorId = req.query.cursor;
+        if (req.query.sort === "top") {
+          //for "top" sort , cursor is more complex
+          // we use the last post's upvoteCount + _id for stable cursor
+          const cursorPost = await Post.findById(cursorId).select("upvoteCount").lean();
+          if (cursorPost) {
+            filters.$or = [
+              { upvotesCount: { $lt: cursorPost.upvotesCount } },
+              {
+                upvotesCount: cursorPost.upvotesCount,
+                _id: { $lt: cursorId },
+              },
+            ];
+            //remove simple upvotesCount filter since $or handels it
+            delete filters.upvotesCount;
+
+          }
+        }
+        else {
+          //for "latest" sort , cursor is just the _id(ObjectId has timestamp)
+          filters._id = { $lt: cursorId };
+        }
+      } catch (err) {
+        //Invalid cursor - ignore and return from begining
+
+      }
+    }
+
+    //ofset based pagination
+    let skip = 0;
+    if (!req.query.cursor && req.query.page) {
+      const page = Math.max(1, Number(req.query.page) || 1);
+      skip = (page - 1) * limit;
     }
 
     const posts = await Post.find(filters)
@@ -75,14 +116,29 @@ const getAllPosts = async (req, res, next) => {
       .limit(limit)
       .lean();
 
-    const totalPosts = await Post.countDocuments(filters);
+    //Total count only needed for offset pagination
+    //for cursor pagination, we just check if there are more posts
+    const hasMore = posts.length === limit;
+    const nextCursor = hasMore ? posts[posts.length - 1]._id : null;
+
+
+    //for backward compat, still provide totalPosts when using offset
+    let totalPosts;
+    let totalPages;
+    if (req.query.page && !req.query.cursor) {
+      totalPosts = await Post.countDocuments(filters);
+      totalPages = Math.ceil(totalPosts / limit);
+    }
+
+
+
 
     res.json({
       page,
-      limit,
-      totalPosts,
-      totalPages: Math.ceil(totalPosts / limit),
-      posts,
+      hasMore,
+      nextCursor,
+      //offset pagination fields(present when using page= query)
+      ...AppError(totalPosts !== undefined && { totalPosts, totalPages, pages: Number(req.query.page) }),
     });
   } catch (err) {
     next(err);
@@ -127,7 +183,7 @@ const updatePost = async (req, res, next) => {
     post.tags = tags ? tags.map((t) => t.toLowerCase().trim()) : post.tags;
     post.difficulty = difficulty || post.difficulty;
     post.result = result || post.result;
-    post.rounds = rounds || post.rounds;
+    post.rounds = rounds !== undefined ? rounds : post.rounds;
 
     const updatePost = await post.save();
 
@@ -153,9 +209,18 @@ const deletePost = async (req, res, next) => {
       throw new AppError("You are not allowed to delete this post", 403);
     }
 
-    await Post.deleteOne({ _id: post._id });
+    //also delete associated upvotes and saves for this post  
+    const Upvote = require("../models/Upvote");
+    const Save = require("../models/Save");
+
+    await Promise.all([
+      Post.deleteOne({ _id: post._id }),
+      Upvote.deleteMany({ postId: post._id }),
+      Save.deleteMany({ postId: post._id }),
+    ]);
+
     clearCacheByPrefix("analytics:");
-    clearCacheByPrefix("analytics:");
+
 
     res.json({ message: "Post deleted Successfully " });
   } catch (err) {
@@ -165,45 +230,80 @@ const deletePost = async (req, res, next) => {
 
 const toggleUpvote = async (req, res, next) => {
   try {
-    if (!req.user) {
-      throw new AppError("Not authorized - please login to upvote", 401);
-    }
-
     const post = await Post.findById(req.params.id);
-
     if (!post) {
-      throw new AppError("Post not Found", 404);
+      throw new AppError("Post not found", 404);
     }
-    const userId = req.user._id.toString();
 
-    const alreadyUpvoted = post.upvotedBy
-      .map((id) => id.toString())
-      .includes(userId);
+    const userId = req.user._id;
+    const postId = post._id;
 
-    if (alreadyUpvoted) {
-      post.upvotedBy = post.upvotedBy.filter((id) => id.toString() !== userId);
-      post.upvotesCount = Math.max(0, post.upvotesCount - 1);
+    // Check if upvote exists using the new Upvote collection
+    const existingUpvote = await Upvote.findOne({ userId, postId });
 
-      await post.save();
+    if (existingUpvote) {
+      // Remove upvote
+      await Upvote.deleteOne({ _id: existingUpvote._id });
+
+      // Decrement counter (min 0)
+      const updatedPost = await Post.findByIdAndUpdate(
+        postId,
+        { $inc: { upvotesCount: -1 } },
+        { new: true, runValidators: true }
+      );
+
+      // Ensure never goes below 0
+      if (updatedPost.upvotesCount < 0) {
+        await Post.findByIdAndUpdate(postId, { upvotesCount: 0 });
+      }
+
       clearCacheByPrefix("analytics:");
-      clearCacheByPrefix("analytics:");
-
       return res.json({
         message: "Upvote removed",
-        upvotesCount: post.upvotesCount,
+        upvotesCount: Math.max(0, updatedPost.upvotesCount),
+        upvoted: false,
       });
     } else {
-      post.upvotedBy.push(req.user._id);
-      post.upvotesCount = post.upvotesCount + 1;
+      // Add upvote
+      await Upvote.create({ userId, postId });
 
-      await post.save();
+      const updatedPost = await Post.findByIdAndUpdate(
+        postId,
+        { $inc: { upvotesCount: 1 } },
+        { new: true }
+      );
+
       clearCacheByPrefix("analytics:");
-
       return res.json({
         message: "Post upvoted",
-        upvotesCount: post.upvotesCount,
+        upvotesCount: updatedPost.upvotesCount,
+        upvoted: true,
       });
     }
+  } catch (err) {
+    // Handle race condition: two simultaneous upvotes
+    if (err.code === 11000) {
+      return res.status(409).json({ message: "Already upvoted" });
+    }
+    next(err);
+  }
+};
+
+// ─────────────────────────────────────────────
+// CHECK UPVOTE STATUS — used on post detail page load
+// ─────────────────────────────────────────────
+const getUpvoteStatus = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      return res.json({ upvoted: false });
+    }
+
+    const upvote = await Upvote.findOne({
+      userId: req.user._id,
+      postId: req.params.id,
+    });
+
+    res.json({ upvoted: !!upvote });
   } catch (err) {
     next(err);
   }
@@ -216,4 +316,5 @@ module.exports = {
   createPost,
   getAllPosts,
   getPostById,
+  getUpvoteStatus
 };
