@@ -1,30 +1,24 @@
 const { z } = require("zod");
 
-const createPostSchema = z.object({
-    companyName: z.string().min(1, "Company name is required"),
-    role: z.string().min(1, "Role is required"),
-    type: z.enum(["Internship", "Full Time", "Junk"], {
-        errorMap: () => ({ message: "Type must be 'Internship' or 'Full Time'" }),
-    }),
-    result: z.enum(["Selected", "Rejected", "Pending", "Junk"], {
-        errorMap: () => ({ message: "Result must be Selected, Rejected, or Pending" }),
-    }),
-    difficulty: z.enum(["Easy", "Medium", "Hard"], {
-        errorMap: () => ({ message: "Difficulty must be Easy, Medium, or Hard" }),
-    }),
-    rounds: z.array(
-        z.object({
-            name: z.string().min(1, "Round name is required"),
-            description: z.string().min(1, "Round description is required"),
-        })
-    ).min(1, "At least one round is required"),
-    tags: z.array(z.string()).optional(),
+const roundSchema = z.object({
+    roundName: z.string().min(1, "Round name is required"),
+    discription: z.string().optional().default(""),
+    questions: z.array(z.string()).optional().default([]),
 });
+
+const createPostSchema = z.object({
+    companyName: z.string().min(1, "Company name is required").max(100),
+    role: z.string().min(1, "Role is required").max(100),
+    result: z.enum(["Selected", "Rejected", "Pending"]).default("Pending"),
+    difficulty: z.enum(["Easy", "Medium", "Hard"]).default("Easy"),
+    rounds: z.array(roundSchema).optional().default([]),
+    tags: z.array(z.string()).max(50).optional().default([]),
+});
+
+const updatePostSchema = createPostSchema.partial();
 
 const addCommentSchema = z.object({
     text: z.string().min(1, "Comment text cannot be empty"),
 });
-
-const updatePostSchema = createPostSchema.partial();
 
 module.exports = { createPostSchema, addCommentSchema, updatePostSchema };

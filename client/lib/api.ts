@@ -9,20 +9,7 @@ export const api = axios.create({
 // This interceptor runs before every request
 api.interceptors.request.use(
   (config) => {
-    // typeof window !== "undefined" is needed because Next.js can run on server too
-    if (typeof window !== "undefined") {
-      // ✅ FIX: Always read fresh token from localStorage
-      // This prevents stale tokens from being used after logout
-      const token = localStorage.getItem("token");
-
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      } else {
-        // ✅ FIX: If no token, remove Authorization header
-        delete config.headers.Authorization;
-      }
-    }
-
+    //Browser automatically sends httpOnly cookies
     return config;
   },
   (error) => {
@@ -30,7 +17,7 @@ api.interceptors.request.use(
   }
 );
 
-// ✅ NEW: Response Interceptor for handling auth errors
+//Response Interceptor for handling auth errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {

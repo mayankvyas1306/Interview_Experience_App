@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import toast from "react-hot-toast"; // ✅ FIX: No Toaster import - handled by root layout
+import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
@@ -22,7 +22,6 @@ type PostDetails = {
   difficulty: "Easy" | "Medium" | "Hard";
   result: "Selected" | "Rejected" | "Waiting";
   upvotesCount: number;
-  upvotedBy?: string[];
   createdAt: string;
   rounds: Round[];
   authorId?: {
@@ -64,12 +63,18 @@ export default function PostDetailsPage() {
 
   const [post, setPost] = useState<PostDetails | null>(null);
   const [loading, setLoading] = useState(true);
+
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
+
   const [upvoting, setUpvoting] = useState(false);
   const [saving, setSaving] = useState(false);
+
   const [isSaved, setIsSaved] = useState(false);
+
+  // ✅ ADDED STATE
+  const [isUpvoted, setIsUpvoted] = useState(false);
 
   const isOwner =
     !!user && !!post?.authorId && user.id === (post.authorId as any)._id;
@@ -106,26 +111,31 @@ export default function PostDetailsPage() {
     };
   }, [postId]);
 
-  // Check if current post is saved (when user is logged in)
+  // ─────────────────────────────────────────────
+  // CHECK SAVE + UPVOTE STATUS
+  // ─────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
-    const checkSaved = async () => {
+
+    const checkStatus = async () => {
       try {
-        const res = await api.get("/users/saved");
-        const savedIds = (res.data.savedPosts || []).map((p: any) => p._id);
-        setIsSaved(savedIds.includes(postId));
+        const [saveRes, upvoteRes] = await Promise.all([
+          api.get(`/users/save-status/${postId}`),
+          api.get(`/posts/${postId}/upvote-status`),
+        ]);
+
+        setIsSaved(saveRes.data.saved);
+        setIsUpvoted(upvoteRes.data.upvoted);
       } catch {
-        // Silent - not critical
+        // silent
       }
     };
-    checkSaved();
+
+    checkStatus();
   }, [user, postId]);
 
   // ─────────────────────────────────────────────
-  // UPVOTE  – ✅ FIX: Redirect to login instead of just toasting
-  // ─────────────────────────────────────────────
-  // ─────────────────────────────────────────────
-  // UPVOTE  – ✅ FIX: Redirect to login instead of just toasting
+  // UPVOTE
   // ─────────────────────────────────────────────
   const handleUpvote = async () => {
     if (!user) {
@@ -136,36 +146,39 @@ export default function PostDetailsPage() {
 
     if (upvoting || !post) return;
 
-    // OPTIMISTIC UPDATE
-    const previousPost = { ...post };
-    const userId = user.id;
-    const isUpvoted = post.upvotedBy?.includes(userId);
+    // Optimistic update
+    const prevCount = post.upvotesCount;
+    const prevUpvoted = isUpvoted;
 
-    const newUpvotesCount = isUpvoted ? Math.max(0, post.upvotesCount - 1) : post.upvotesCount + 1;
-    const newUpvotedBy = isUpvoted
-      ? post.upvotedBy?.filter(id => id !== userId) || []
-      : [...(post.upvotedBy || []), userId];
-
-    // Apply optimistic state
     setPost({
       ...post,
-      upvotesCount: newUpvotesCount,
-      upvotedBy: newUpvotedBy
+      upvotesCount: isUpvoted
+        ? Math.max(0, post.upvotesCount - 1)
+        : post.upvotesCount + 1,
     });
+
+    setIsUpvoted(!isUpvoted);
 
     try {
       setUpvoting(true);
-      // API call in background
+
       const res = await api.patch(`/posts/${postId}/upvote`);
 
-      // Update with actual server response (eventually consistent)
       setPost((prev) =>
-        prev ? { ...prev, upvotesCount: res.data.upvotesCount, upvotedBy: isUpvoted ? prev.upvotedBy?.filter(id => id !== userId) : [...(prev.upvotedBy || []), userId] } : prev,
+        prev ? { ...prev, upvotesCount: res.data.upvotesCount } : prev
       );
+
+      setIsUpvoted(res.data.upvoted);
+
       toast.success(res.data.message);
     } catch (err: any) {
-      // Revert on failure
-      setPost(previousPost);
+      // revert
+      setPost((prev) =>
+        prev ? { ...prev, upvotesCount: prevCount } : prev
+      );
+
+      setIsUpvoted(prevUpvoted);
+
       toast.error(err?.response?.data?.message || "Upvote failed");
     } finally {
       setUpvoting(false);
@@ -173,7 +186,7 @@ export default function PostDetailsPage() {
   };
 
   // ─────────────────────────────────────────────
-  // SAVE  – ✅ FIX: Redirect to login, optimistic UI
+  // SAVE
   // ─────────────────────────────────────────────
   const handleSave = async () => {
     if (!user) {
@@ -186,10 +199,16 @@ export default function PostDetailsPage() {
 
     try {
       setSaving(true);
+
       const res = await api.patch(`/users/save/${postId}`);
+
       const nowSaved = res.data.saved;
+
       setIsSaved(nowSaved);
-      toast.success(res.data.message, { icon: nowSaved ? "⭐" : "📌" });
+
+      toast.success(res.data.message, {
+        icon: nowSaved ? "⭐" : "📌",
+      });
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Save failed");
     } finally {
@@ -214,11 +233,17 @@ export default function PostDetailsPage() {
 
     try {
       setCommentLoading(true);
-      const res = await api.post(`/comments/${postId}`, { text: commentText });
+
+      const res = await api.post(`/comments/${postId}`, {
+        text: commentText,
+      });
+
       toast.success(res.data.message);
+
       setCommentText("");
-      // Refresh comments
+
       const commentsRes = await api.get(`/comments/${postId}`);
+
       setComments(commentsRes.data.comments);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Failed to add comment");
@@ -230,7 +255,9 @@ export default function PostDetailsPage() {
   const handleDeleteComment = async (commentId: string) => {
     try {
       const res = await api.delete(`/comments/${commentId}`);
+
       toast.success(res.data.message);
+
       setComments((prev) => prev.filter((c) => c._id !== commentId));
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Failed to delete comment");
@@ -238,7 +265,7 @@ export default function PostDetailsPage() {
   };
 
   // ─────────────────────────────────────────────
-  // RENDER
+  // LOADING
   // ─────────────────────────────────────────────
   if (loading) {
     return (
@@ -259,9 +286,7 @@ export default function PostDetailsPage() {
 
   return (
     <div className="container py-5">
-      {/* ✅ FIX: NO <Toaster /> here — handled by root layout.tsx */}
 
-      {/* Header Card */}
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -269,8 +294,10 @@ export default function PostDetailsPage() {
         className="glass glow-border p-4 p-md-5 rounded-4 mb-4"
       >
         <div className="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+
           <div>
             <h2 className="fw-bold mb-1">{post.companyName}</h2>
+
             <div className="text-muted2">
               <i className="bi bi-briefcase me-2"></i>
               {post.role}
@@ -280,6 +307,7 @@ export default function PostDetailsPage() {
               <span className={`badge bg-${DIFFICULTY_BADGE[post.difficulty]}`}>
                 {post.difficulty}
               </span>
+
               <span className={`badge bg-${RESULT_BADGE[post.result]}`}>
                 {post.result}
               </span>
@@ -300,24 +328,15 @@ export default function PostDetailsPage() {
                 </span>
               ))}
             </div>
-
-            <div className="text-muted2 small mt-3">
-              <i className="bi bi-person-circle me-2"></i>
-              {post.authorId?.fullName || "Anonymous"}
-              <span className="ms-2">
-                • {post.authorId?.college || "College"} • Year{" "}
-                {post.authorId?.year || "-"}
-              </span>
-            </div>
           </div>
 
           <div className="d-flex gap-2 flex-wrap">
-            {/* ✅ FIX: Button works for everyone - redirects to login if not logged in */}
+
             <button
               onClick={handleUpvote}
               disabled={upvoting}
-              className="btn btn-outline-light rounded-3"
-              title={!user ? "Login to upvote" : ""}
+              className={`btn rounded-3 ${isUpvoted ? "btn-accent" : "btn-outline-light"
+                }`}
             >
               {upvoting ? (
                 <span className="spinner-border spinner-border-sm me-2"></span>
@@ -326,26 +345,29 @@ export default function PostDetailsPage() {
               )}
               Upvote ({post.upvotesCount})
             </button>
+
             {isOwner && (
               <Link
                 href={`/edit/${post._id}`}
                 className="btn btn-accent rounded-3"
               >
-                <i className="bi bi-pencil-square me-2"></i>Edit Post
+                <i className="bi bi-pencil-square me-2"></i>
+                Edit Post
               </Link>
             )}
 
             <button
               onClick={handleSave}
               disabled={saving}
-              className={`btn rounded-3 ${isSaved ? "btn-accent" : "btn-outline-light"}`}
-              title={!user ? "Login to save" : isSaved ? "Unsave" : "Save post"}
+              className={`btn rounded-3 ${isSaved ? "btn-accent" : "btn-outline-light"
+                }`}
             >
               {saving ? (
                 <span className="spinner-border spinner-border-sm me-2"></span>
               ) : (
                 <i
-                  className={`bi ${isSaved ? "bi-bookmark-fill" : "bi-bookmark-star"} me-2`}
+                  className={`bi ${isSaved ? "bi-bookmark-fill" : "bi-bookmark-star"
+                    } me-2`}
                 ></i>
               )}
               {isSaved ? "Saved" : "Save"}
@@ -354,152 +376,6 @@ export default function PostDetailsPage() {
         </div>
       </motion.div>
 
-      {/* Rounds + Comments */}
-      <div className="row g-4">
-        {/* LEFT: Rounds */}
-        <div className="col-lg-7">
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.05 }}
-            className="glass rounded-4 p-4"
-          >
-            <h4 className="fw-bold mb-3">
-              Interview Rounds{" "}
-              <span className="text-muted2">({post.rounds.length})</span>
-            </h4>
-
-            {post.rounds.length === 0 ? (
-              <div className="text-muted2">No rounds added.</div>
-            ) : (
-              <div className="d-flex flex-column gap-3">
-                {post.rounds.map((round, idx) => (
-                  <div key={idx} className="glass rounded-4 p-3">
-                    <div className="d-flex justify-content-between flex-wrap gap-2">
-                      <div className="fw-semibold">
-                        <i className="bi bi-layers me-2"></i>
-                        {round.roundName}
-                      </div>
-                      <span className="badge rounded-pill bg-secondary">
-                        Round {idx + 1}
-                      </span>
-                    </div>
-
-                    <p className="text-muted2 mt-2 mb-2">{round.description}</p>
-
-                    {round.questions && round.questions.length > 0 && (
-                      <div className="mt-2">
-                        <div className="small text-muted2 mb-1">
-                          Questions asked:
-                        </div>
-                        <ul className="mb-0 text-light">
-                          {round.questions.map((q, i) => (
-                            <li key={i} className="text-muted2">
-                              {q}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        </div>
-
-        {/* RIGHT: Comments */}
-        <div className="col-lg-5">
-          <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.1 }}
-            className="glass rounded-4 p-4"
-          >
-            <h4 className="fw-bold mb-3">
-              Comments <span className="text-muted2">({comments.length})</span>
-            </h4>
-
-            {/* Add comment box */}
-            {user ? (
-              <div className="mb-3">
-                <textarea
-                  className="form-control bg-transparent text-light border-secondary"
-                  placeholder="Write your comment..."
-                  rows={3}
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                />
-                <button
-                  disabled={commentLoading}
-                  onClick={handleAddComment}
-                  className="btn btn-accent w-100 mt-2 rounded-3"
-                >
-                  {commentLoading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2"></span>
-                      Posting...
-                    </>
-                  ) : (
-                    "Post Comment"
-                  )}
-                </button>
-              </div>
-            ) : (
-              // ✅ FIX: Show clear CTA for guests instead of disabled state
-              <div className="glass rounded-4 p-3 mb-3 text-center">
-                <p className="text-muted2 mb-2">
-                  <i className="bi bi-lock me-2"></i>
-                  Please login to comment
-                </p>
-                <a
-                  href="/auth/login"
-                  className="btn btn-sm btn-accent rounded-3"
-                >
-                  Login to Comment
-                </a>
-              </div>
-            )}
-
-            {/* Comments list */}
-            <div className="d-flex flex-column gap-3">
-              {comments.length === 0 ? (
-                <div className="text-muted2">
-                  No comments yet. Be the first one ✨
-                </div>
-              ) : (
-                comments.map((c) => (
-                  <div key={c._id} className="glass rounded-4 p-3">
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div className="fw-semibold small">
-                        <i className="bi bi-person-circle me-2"></i>
-                        {c.userId?.fullName || "User"}
-                      </div>
-
-                      <div className="d-flex align-items-center gap-2">
-                        <div className="text-muted2 small">
-                          {new Date(c.createdAt).toLocaleDateString()}
-                        </div>
-
-                        {user?.id === c.userId?._id && (
-                          <button
-                            onClick={() => handleDeleteComment(c._id)}
-                            className="btn btn-sm btn-outline-danger rounded-3"
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="text-muted2 mt-2">{c.text}</div>
-                  </div>
-                ))
-              )}
-            </div>
-          </motion.div>
-        </div>
-      </div>
     </div>
   );
 }

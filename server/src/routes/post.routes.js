@@ -1,6 +1,6 @@
 const express = require("express");
-const { protect } = require("../middlewares/auth.middleware");
-const { createPost, getAllPosts, deletePost, updatePost, getPostById, toggleUpvote } = require("../controllers/post.controller");
+const { protect, optionalProtect } = require("../middlewares/auth.middleware");
+const { createPost, getAllPosts, deletePost, updatePost, getPostById, toggleUpvote, getUpvoteStatus } = require("../controllers/post.controller");
 const validate = require("../middlewares/validateZod.middleware");
 const { createPostSchema, updatePostSchema } = require("../schemas/post.schema");
 
@@ -19,5 +19,6 @@ router.delete("/:id", protect, deletePost);
 
 //upvote route
 router.patch("/:id/upvote", protect, toggleUpvote);
+router.get("/:id/upvote-status", optionalProtect, getUpvoteStatus);
 
 module.exports = router;

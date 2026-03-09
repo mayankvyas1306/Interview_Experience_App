@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 type Round = {
   roundName: string;
@@ -44,14 +45,14 @@ export default function CreatePage() {
 
   const [loading, setLoading] = useState(false);
 
-  // 🔐 Redirect if not logged in
+  const { user } = useAuth();
+
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+    if (!user) {
       toast.error("Please login first");
       router.push("/auth/login");
     }
-  }, []);
+  }, [user, router]);
 
   // ---------------- TAG LOGIC ----------------
 
@@ -177,7 +178,7 @@ export default function CreatePage() {
 
   return (
     <div className="container py-5">
-      
+
       {/* HEADER */}
       <motion.div className="glass glow-border p-4 p-md-5 rounded-4 mb-4">
         <h2 className="fw-bold mb-1">Share Interview Experience ✨</h2>
@@ -210,87 +211,87 @@ export default function CreatePage() {
               </div>
 
               {/* TAGS */}
-<div className="col-12">
-  <label className="form-label text-muted2">Tags</label>
+              <div className="col-12">
+                <label className="form-label text-muted2">Tags</label>
 
-  {/* Selected tags */}
-  <div className="d-flex flex-wrap gap-2 mb-2">
-    {tags.map((tag) => (
-      <span
-        key={tag}
-        className="badge rounded-pill d-flex align-items-center gap-2"
-        style={{
-          background: "rgba(109,94,249,0.25)",
-          border: "1px solid rgba(109,94,249,0.45)",
-        }}
-      >
-        #{tag}
-        <button
-          type="button"
-          onClick={() => removeTag(tag)}
-          className="btn btn-sm text-light p-0"
-        >
-          ✕
-        </button>
-      </span>
-    ))}
-  </div>
+                {/* Selected tags */}
+                <div className="d-flex flex-wrap gap-2 mb-2">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="badge rounded-pill d-flex align-items-center gap-2"
+                      style={{
+                        background: "rgba(109,94,249,0.25)",
+                        border: "1px solid rgba(109,94,249,0.45)",
+                      }}
+                    >
+                      #{tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="btn btn-sm text-light p-0"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
 
-  {/* Input + Suggestions */}
-  <div className="position-relative">
-    <input
-      className="form-control bg-transparent text-light border-secondary"
-      placeholder="Type a tag (e.g. DSA) and press Enter"
-      value={tagInput}
-      onChange={(e) => {
-        setTagInput(e.target.value);
-        setShowSuggestions(true);
-      }}
-      onFocus={() => setShowSuggestions(true)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          addTag(tagInput);
-        }
-      }}
-    />
+                {/* Input + Suggestions */}
+                <div className="position-relative">
+                  <input
+                    className="form-control bg-transparent text-light border-secondary"
+                    placeholder="Type a tag (e.g. DSA) and press Enter"
+                    value={tagInput}
+                    onChange={(e) => {
+                      setTagInput(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addTag(tagInput);
+                      }
+                    }}
+                  />
 
-    {/* Suggestions dropdown */}
-    {showSuggestions && tagInput && filteredSuggestions.length > 0 && (
-      <div
-        className="position-absolute w-100 mt-2 rounded-3"
-        style={{
-          zIndex: 1000,
-          background: "rgba(20, 24, 40, 0.98)",
-          border: "1px solid rgba(255,255,255,0.12)",
-          backdropFilter: "blur(12px)",
-          maxHeight: 180,
-          overflowY: "auto",
-        }}
-      >
-        {filteredSuggestions.map((tag) => (
-          <div
-            key={tag}
-            className="px-3 py-2"
-            style={{
-              cursor: "pointer",
-            }}
-            onMouseDown={() => addTag(tag)}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background =
-                "rgba(255,255,255,0.08)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "transparent")
-            }
-          >
-            #{tag}
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-</div>
+                  {/* Suggestions dropdown */}
+                  {showSuggestions && tagInput && filteredSuggestions.length > 0 && (
+                    <div
+                      className="position-absolute w-100 mt-2 rounded-3"
+                      style={{
+                        zIndex: 1000,
+                        background: "rgba(20, 24, 40, 0.98)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        backdropFilter: "blur(12px)",
+                        maxHeight: 180,
+                        overflowY: "auto",
+                      }}
+                    >
+                      {filteredSuggestions.map((tag) => (
+                        <div
+                          key={tag}
+                          className="px-3 py-2"
+                          style={{
+                            cursor: "pointer",
+                          }}
+                          onMouseDown={() => addTag(tag)}
+                          onMouseEnter={(e) =>
+                          (e.currentTarget.style.background =
+                            "rgba(255,255,255,0.08)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "transparent")
+                          }
+                        >
+                          #{tag}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
 
             </div>
 

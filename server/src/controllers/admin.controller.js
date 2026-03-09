@@ -1,75 +1,94 @@
 const Post = require("../models/Post");
 const User = require("../models/User");
 
-const getAdminStats = async (req,res,next)=>{
-    try{
+const getAdminStats = async (req, res, next) => {
+    try {
         const totalUsers = await User.countDocuments();
         const totalPosts = await Post.countDocuments();
 
         const topCompanies = await Post.aggregate([
-            { $group: { _id: "$companyName",count:{$sum:1}}},
-            { $sort: {count:-1}},
-            { $limit:5},
+            { $group: { _id: "$companyName", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 5 },
         ]);
         res.json({
             totalUsers,
             totalPosts,
             topCompanies,
         });
-    }catch(err){
+    } catch (err) {
         next(err);
     }
 };
 
 
-const getAllPostsAdmin = async(req,res,next)=>{
-    try{
-        const posts = await Post.find()
-            .populate("authorId","fullName email role")
-            .sort({createdAt:-1});
+const getAllPostsAdmin = async (req, res, next) => {
+    try {
 
-        res.json({
-            total: posts.length,
-            posts,
-        });
-    }catch(err){
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.max(1, Number(req.query.limit) || 20, 100);
+        const skip = (page - 1) * limit;
+
+        const [posts, total] = await Promise.all([
+            Post.find()
+                .populate("authorId", "fullName email role")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Post.countDocuments(),
+        ]);
+
+        res.json({ total, page, totalPages: Math.ceil(total / limit), posts });
+    } catch (err) {
         next(err);
     }
 };
 
-const adminDeletePost = async (req,res,next) =>{
-    try{
+const adminDeletePost = async (req, res, next) => {
+    try {
         const post = await Post.findById(req.params.id);
 
-        if(!post){
+        if (!post) {
             res.status(404);
             throw new Error("Post not found");
         }
 
-        await Post.deleteOne({ _id:post._id});
+        await Post.deleteOne({ _id: post._id });
 
-        res.json({message:"Post deleted by admin"});
-    }catch(err){
+        res.json({ message: "Post deleted by admin" });
+    } catch (err) {
         next(err);
     }
 };
 
 // GET ALL USERS
-const getAllUsersAdmin = async (req,res,next)=>{
-    try{
-        const users = await User.find().select("-password");
-        res.json({total: users.length, users});
-    }catch(err){
+const getAllUsersAdmin = async (req, res, next) => {
+    try {
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(Number(req.query.limit) || 20, 100);
+        const skip = (page - 1) * limit;
+
+        const [users, total] = await Promise.all([
+            User.find()
+                .select("-password")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            User.countDocuments(),
+        ]);
+
+        res.json({ total, page, totalPages: Math.ceil(total / limit), users });
+    } catch (err) {
         next(err);
     }
 };
 
 // TOGGLE BAN USER
-const toggleBanUser = async (req,res,next)=>{
-    try{
+const toggleBanUser = async (req, res, next) => {
+    try {
         const user = await User.findById(req.params.id);
 
-        if(!user){
+        if (!user) {
             res.status(404);
             throw new Error("User not found");
         }
@@ -78,21 +97,21 @@ const toggleBanUser = async (req,res,next)=>{
         await user.save();
 
         res.json({
-            message: user.isBanned 
-              ? "User banned" 
-              : "User unbanned"
+            message: user.isBanned
+                ? "User banned"
+                : "User unbanned"
         });
-    }catch(err){
+    } catch (err) {
         next(err);
     }
 };
 
 // PROMOTE / DEMOTE ADMIN
-const toggleAdminRole = async (req,res,next)=>{
-    try{
+const toggleAdminRole = async (req, res, next) => {
+    try {
         const user = await User.findById(req.params.id);
 
-        if(!user){
+        if (!user) {
             res.status(404);
             throw new Error("User not found");
         }
@@ -101,14 +120,14 @@ const toggleAdminRole = async (req,res,next)=>{
         await user.save();
 
         res.json({
-            message:`Role changed to ${user.role}`
+            message: `Role changed to ${user.role}`
         });
-    }catch(err){
+    } catch (err) {
         next(err);
     }
 };
 
-module.exports={
+module.exports = {
     getAdminStats,
     getAllPostsAdmin,
     adminDeletePost,
