@@ -1,14 +1,16 @@
 const Post = require("../models/Post");
+const Upvote = require("../models/Upvote");
 const { clearCacheByPrefix } = require("../utils/cache");
 const AppError = require("../utils/AppError");
-const Upvote = require("../models/Upvote")
+const { createNotification } = require("../utils/notificationHelper");
+
 const escapeRegex = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 //create a new interview experience post
 const createPost = async (req, res, next) => {
   try {
-    const { companyName, role, tags, difficulty, result, rounds } = req.body;
+    const { companyName, role, tags, difficulty, result, rounds, isAnonymous } = req.body;
 
     const post = await Post.create({
       authorId: req.user._id, //coming from protect middleware
@@ -18,6 +20,7 @@ const createPost = async (req, res, next) => {
       difficulty: difficulty || "Medium",
       result: result || "Waiting",
       rounds: rounds || [],
+      isAnonymous: isAnonymous === true,
     });
 
     clearCacheByPrefix("analytics:");
@@ -116,6 +119,14 @@ const getAllPosts = async (req, res, next) => {
       .limit(limit)
       .lean();
 
+
+    //Anonymize author on public posts
+    const sanitizedPosts = posts.map((post) => ({
+      ...post,
+      authorId: post.isAnonymous ? null : post.authorId,
+    }));
+
+
     //Total count only needed for offset pagination
     //for cursor pagination, we just check if there are more posts
     const hasMore = posts.length === limit;
@@ -123,8 +134,7 @@ const getAllPosts = async (req, res, next) => {
 
 
     //for backward compat, still provide totalPosts when using offset
-    let totalPosts;
-    let totalPages;
+    let totalPosts, totalPages;
     if (req.query.page && !req.query.cursor) {
       totalPosts = await Post.countDocuments(filters);
       totalPages = Math.ceil(totalPosts / limit);
@@ -134,11 +144,11 @@ const getAllPosts = async (req, res, next) => {
 
 
     res.json({
-      page,
+      posts: sanitizedPosts,
       hasMore,
       nextCursor,
       //offset pagination fields(present when using page= query)
-      ...AppError(totalPosts !== undefined && { totalPosts, totalPages, pages: Number(req.query.page) }),
+      ...(totalPosts !== undefined && { totalPosts, totalPages, pages: Number(req.query.page) }),
     });
   } catch (err) {
     next(err);
@@ -148,16 +158,20 @@ const getAllPosts = async (req, res, next) => {
 //get post By Id
 const getPostById = async (req, res, next) => {
   try {
-    const post = await Post.findById(req.params.id).populate(
-      "authorId",
-      "fullName email college year",
-    );
+    const post = await Post.findById(req.params.id)
+      .populate("authorId", "fullName email college year")
+      .lean();
 
     if (!post) {
       throw new AppError("Post not Found", 404);
     }
 
-    res.json({ post });
+    const sanitizedPost = {
+      ...post,
+      authorId: post.isAnonymous ? null : post.authorId,
+    };
+
+    res.json({ post: sanitizedPost });
   } catch (err) {
     next(err);
   }
@@ -186,7 +200,6 @@ const updatePost = async (req, res, next) => {
     post.rounds = rounds !== undefined ? rounds : post.rounds;
 
     const updatePost = await post.save();
-
     clearCacheByPrefix("analytics:");
     res.json({
       message: "Post updated successfully",
@@ -210,7 +223,6 @@ const deletePost = async (req, res, next) => {
     }
 
     //also delete associated upvotes and saves for this post  
-    const Upvote = require("../models/Upvote");
     const Save = require("../models/Save");
 
     await Promise.all([
@@ -221,7 +233,6 @@ const deletePost = async (req, res, next) => {
 
     clearCacheByPrefix("analytics:");
 
-
     res.json({ message: "Post deleted Successfully " });
   } catch (err) {
     next(err);
@@ -231,32 +242,20 @@ const deletePost = async (req, res, next) => {
 const toggleUpvote = async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
-    if (!post) {
-      throw new AppError("Post not found", 404);
-    }
+    if (!post) throw new AppError("Post not found", 404);
 
     const userId = req.user._id;
     const postId = post._id;
 
-    // Check if upvote exists using the new Upvote collection
     const existingUpvote = await Upvote.findOne({ userId, postId });
 
     if (existingUpvote) {
-      // Remove upvote
       await Upvote.deleteOne({ _id: existingUpvote._id });
-
-      // Decrement counter (min 0)
       const updatedPost = await Post.findByIdAndUpdate(
         postId,
         { $inc: { upvotesCount: -1 } },
-        { new: true, runValidators: true }
+        { new: true }
       );
-
-      // Ensure never goes below 0
-      if (updatedPost.upvotesCount < 0) {
-        await Post.findByIdAndUpdate(postId, { upvotesCount: 0 });
-      }
-
       clearCacheByPrefix("analytics:");
       return res.json({
         message: "Upvote removed",
@@ -264,14 +263,21 @@ const toggleUpvote = async (req, res, next) => {
         upvoted: false,
       });
     } else {
-      // Add upvote
       await Upvote.create({ userId, postId });
-
       const updatedPost = await Post.findByIdAndUpdate(
         postId,
         { $inc: { upvotesCount: 1 } },
         { new: true }
       );
+
+      // Notify post author (fire-and-forget — don't await)
+      createNotification({
+        recipientId: post.authorId,
+        senderId: userId,
+        type: "upvote",
+        postId: post._id,
+        message: `${req.user.fullName} upvoted your post at ${post.companyName}`,
+      });
 
       clearCacheByPrefix("analytics:");
       return res.json({
@@ -281,10 +287,7 @@ const toggleUpvote = async (req, res, next) => {
       });
     }
   } catch (err) {
-    // Handle race condition: two simultaneous upvotes
-    if (err.code === 11000) {
-      return res.status(409).json({ message: "Already upvoted" });
-    }
+    if (err.code === 11000) return res.status(409).json({ message: "Already upvoted" });
     next(err);
   }
 };

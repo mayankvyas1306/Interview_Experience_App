@@ -3,6 +3,18 @@ const User = require("../models/User");
 const Save = require("../models/Save")
 const AppError = require("../utils/AppError");
 
+//Reputation formula - deterministic, always accurate
+const calculateReputation = (totalPosts, totalUpvotes, totalSavesReceived) => {
+  return (totalPosts * 10) + (totalUpvotes * 5) + (totalSavesReceived * 3);
+};
+
+const getReputationRank = (rep) => {
+  if (rep >= 1001) return "Expert";
+  if (rep >= 501) return "Veteran";
+  if (rep >= 201) return "Active Member";
+  if (rep >= 51) return "Contributor";
+  return "Newcomer";
+}
 
 // save unsave post functionality
 const toggleSavePost = async (req, res, next) => {
@@ -93,29 +105,31 @@ const getSaveStatus = async (req, res, next) => {
 
 const getUserProfile = async (req, res, next) => {
   try {
-    if (!req.user) {
-      res.status(401);
-      throw new Error("Not authorized");
-    }
-
     const user = await User.findById(req.user._id).select("-password").lean();
-    if (!user) {
-      res.status(404);
-      throw new AppError("User not found", 404);
-    }
+    if (!user) throw new AppError("User not found", 404);
 
-    res.json({ user });
+    // Calculate reputation
+    const userPosts = await Post.find({ authorId: user._id }).select("upvotesCount").lean();
+    const totalPosts = userPosts.length;
+    const totalUpvotes = userPosts.reduce((sum, p) => sum + (p.upvotesCount || 0), 0);
+    const totalSavesReceived = await Save.countDocuments({
+      postId: { $in: userPosts.map((p) => p._id) },
+    });
+
+    const reputation = calculateReputation(totalPosts, totalUpvotes, totalSavesReceived);
+    const rank = getReputationRank(reputation);
+
+    res.json({ user: { ...user, reputation, rank } });
   } catch (err) {
     next(err);
   }
-}
+};
 
 const getMyPosts = async (req, res, next) => {
   try {
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(Math.max(1, Number(req.query.limit) || 6), 50);
     const skip = (page - 1) * limit;
-
     const filters = { authorId: req.user._id };
 
     const [posts, totalPosts] = await Promise.all([

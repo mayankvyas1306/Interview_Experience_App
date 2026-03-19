@@ -31,13 +31,14 @@ export default function CreatePage() {
 
   const [difficulty, setDifficulty] =
     useState<"Easy" | "Medium" | "Hard">("Medium");
-  const [result, setResult] =
-    useState<"Selected" | "Rejected" | "Waiting">("Waiting");
 
-  // ✅ TAG STATE
+  const [result, setResult] =
+    useState<"Selected" | "Rejected" | "Pending">("Pending");
+
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   const [rounds, setRounds] = useState<Round[]>([
     { roundName: "OA", description: "", questions: [""] },
@@ -54,13 +55,7 @@ export default function CreatePage() {
     }
   }, [user, router]);
 
-  // ---------------- TAG LOGIC ----------------
-
-  const filteredSuggestions = AVAILABLE_TAGS.filter(
-    (t) =>
-      t.toLowerCase().includes(tagInput.toLowerCase()) &&
-      !tags.includes(t),
-  );
+  // ---------------- TAGS ----------------
 
   const addTag = (tag: string) => {
     const clean = tag.trim();
@@ -68,7 +63,6 @@ export default function CreatePage() {
 
     setTags((prev) => [...prev, clean]);
     setTagInput("");
-    setShowSuggestions(false);
   };
 
   const removeTag = (tag: string) => {
@@ -104,14 +98,10 @@ export default function CreatePage() {
     });
   };
 
-  // ✅ FIX: ONLY ONE QUESTION PER CLICK
   const addQuestion = (roundIndex: number) => {
     setRounds((prev) => {
       const copy = [...prev];
-      copy[roundIndex] = {
-        ...copy[roundIndex],
-        questions: [...copy[roundIndex].questions, ""],
-      };
+      copy[roundIndex].questions.push("");
       return copy;
     });
   };
@@ -119,9 +109,8 @@ export default function CreatePage() {
   const removeQuestion = (roundIndex: number, qIndex: number) => {
     setRounds((prev) => {
       const copy = [...prev];
-      copy[roundIndex].questions = copy[roundIndex].questions.filter(
-        (_, i) => i !== qIndex,
-      );
+      copy[roundIndex].questions =
+        copy[roundIndex].questions.filter((_, i) => i !== qIndex);
       return copy;
     });
   };
@@ -159,10 +148,11 @@ export default function CreatePage() {
       const res = await api.post("/posts", {
         companyName,
         role,
-        tags,
         difficulty,
         result,
+        tags,
         rounds: cleanedRounds,
+        isAnonymous,
       });
 
       toast.success("Post created ✅");
@@ -179,205 +169,255 @@ export default function CreatePage() {
   return (
     <div className="container py-5">
 
-      {/* HEADER */}
-      <motion.div className="glass glow-border p-4 p-md-5 rounded-4 mb-4">
-        <h2 className="fw-bold mb-1">Share Interview Experience ✨</h2>
+      <motion.div
+        className="glass glow-border p-4 rounded-4 mb-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <h2 className="fw-bold">Share Interview Experience ✨</h2>
         <p className="text-muted2 mb-0">
-          Create a structured post with rounds, questions, and tags.
+          Help others prepare by sharing your interview journey.
         </p>
       </motion.div>
 
-      <div className="row g-4">
-        <div className="col-lg-8">
-          <motion.div className="glass rounded-4 p-4">
-            {/* BASIC INFO */}
-            <div className="row g-3">
-              <div className="col-md-6">
-                <label className="form-label text-muted2">Company Name</label>
-                <input
-                  className="form-control bg-transparent text-light border-secondary"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                />
-              </div>
+      <div className="glass rounded-4 p-4">
 
-              <div className="col-md-6">
-                <label className="form-label text-muted2">Role</label>
-                <input
-                  className="form-control bg-transparent text-light border-secondary"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                />
-              </div>
+        {/* BASIC INFO */}
+        <div className="row g-3">
 
-              {/* TAGS */}
-              <div className="col-12">
-                <label className="form-label text-muted2">Tags</label>
+          <div className="col-md-6">
+            <label className="form-label text-muted2">Company Name</label>
+            <input
+              placeholder="Google, Amazon..."
+              className="form-control bg-transparent text-light border-secondary"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+            />
+          </div>
 
-                {/* Selected tags */}
-                <div className="d-flex flex-wrap gap-2 mb-2">
-                  {tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="badge rounded-pill d-flex align-items-center gap-2"
-                      style={{
-                        background: "rgba(109,94,249,0.25)",
-                        border: "1px solid rgba(109,94,249,0.45)",
-                      }}
-                    >
-                      #{tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="btn btn-sm text-light p-0"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-                </div>
+          <div className="col-md-6">
+            <label className="form-label text-muted2">Role</label>
+            <input
+              placeholder="SDE Intern, Backend Engineer..."
+              className="form-control bg-transparent text-light border-secondary"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+            />
+          </div>
 
-                {/* Input + Suggestions */}
-                <div className="position-relative">
-                  <input
-                    className="form-control bg-transparent text-light border-secondary"
-                    placeholder="Type a tag (e.g. DSA) and press Enter"
-                    value={tagInput}
-                    onChange={(e) => {
-                      setTagInput(e.target.value);
-                      setShowSuggestions(true);
-                    }}
-                    onFocus={() => setShowSuggestions(true)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addTag(tagInput);
-                      }
-                    }}
-                  />
+          {/* DIFFICULTY */}
+          <div className="col-md-6">
+            <label className="form-label text-muted2">Difficulty</label>
 
-                  {/* Suggestions dropdown */}
-                  {showSuggestions && tagInput && filteredSuggestions.length > 0 && (
-                    <div
-                      className="position-absolute w-100 mt-2 rounded-3"
-                      style={{
-                        zIndex: 1000,
-                        background: "rgba(20, 24, 40, 0.98)",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        backdropFilter: "blur(12px)",
-                        maxHeight: 180,
-                        overflowY: "auto",
-                      }}
-                    >
-                      {filteredSuggestions.map((tag) => (
-                        <div
-                          key={tag}
-                          className="px-3 py-2"
-                          style={{
-                            cursor: "pointer",
-                          }}
-                          onMouseDown={() => addTag(tag)}
-                          onMouseEnter={(e) =>
-                          (e.currentTarget.style.background =
-                            "rgba(255,255,255,0.08)")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.background = "transparent")
-                          }
-                        >
-                          #{tag}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-            </div>
-
-            {/* ROUNDS */}
-            <div className="mt-4">
-              <div className="d-flex justify-content-between">
-                <h4 className="fw-bold">Rounds</h4>
+            <div className="d-flex gap-2">
+              {["Easy", "Medium", "Hard"].map((level) => (
                 <button
-                  onClick={addRound}
-                  className="btn btn-outline-light rounded-3"
+                  key={level}
+                  type="button"
+                  onClick={() =>
+                    setDifficulty(level as "Easy" | "Medium" | "Hard")
+                  }
+                  className={`btn rounded-pill px-3 ${difficulty === level
+                      ? "btn-accent"
+                      : "btn-outline-light"
+                    }`}
                 >
-                  + Add Round
+                  {level}
                 </button>
+              ))}
+            </div>
+          </div>
+
+          {/* RESULT */}
+          <div className="col-md-6">
+            <label className="form-label text-muted2">Result</label>
+
+            <div className="d-flex gap-2">
+              {["Pending", "Selected", "Rejected"].map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() =>
+                    setResult(
+                      r as "Pending" | "Selected" | "Rejected",
+                    )
+                  }
+                  className={`btn rounded-pill px-3 ${result === r
+                      ? r === "Selected"
+                        ? "btn-success"
+                        : r === "Rejected"
+                          ? "btn-danger"
+                          : "btn-warning"
+                      : "btn-outline-light"
+                    }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ANONYMOUS */}
+          <div className="col-12">
+            <div
+              className="glass rounded-3 p-3 d-flex justify-content-between align-items-center"
+              style={{ cursor: "pointer" }}
+              onClick={() => setIsAnonymous(!isAnonymous)}
+            >
+              <div>
+                <div className="fw-semibold">Post Anonymously</div>
+                <div className="text-muted2 small">
+                  Hide your name and college publicly
+                </div>
               </div>
 
-              <div className="mt-3 d-flex flex-column gap-3">
-                {rounds.map((round, rIndex) => (
-                  <div key={rIndex} className="glass rounded-4 p-3">
-                    <div className="d-flex gap-2">
-                      <input
-                        className="form-control bg-transparent text-light border-secondary"
-                        value={round.roundName}
-                        onChange={(e) =>
-                          updateRoundField(
-                            rIndex,
-                            "roundName",
-                            e.target.value,
-                          )
-                        }
-                      />
-                      <button
-                        onClick={() => removeRound(rIndex)}
-                        disabled={rounds.length === 1}
-                        className="btn btn-outline-danger"
-                      >
-                        🗑
-                      </button>
-                    </div>
-
-                    <div className="mt-2">
-                      {round.questions.map((q, qIndex) => (
-                        <div key={qIndex} className="d-flex gap-2 mt-2">
-                          <input
-                            className="form-control bg-transparent text-light border-secondary"
-                            value={q}
-                            onChange={(e) =>
-                              updateQuestion(
-                                rIndex,
-                                qIndex,
-                                e.target.value,
-                              )
-                            }
-                          />
-                          <button
-                            onClick={() =>
-                              removeQuestion(rIndex, qIndex)
-                            }
-                            disabled={round.questions.length === 1}
-                            className="btn btn-outline-danger"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-
-                      <button
-                        onClick={() => addQuestion(rIndex)}
-                        className="btn btn-sm btn-outline-light mt-2"
-                      >
-                        + Add Question
-                      </button>
-                    </div>
-                  </div>
-                ))}
+              <div
+                className={`badge ${isAnonymous ? "bg-primary" : "bg-secondary"
+                  }`}
+              >
+                {isAnonymous ? "ON" : "OFF"}
               </div>
             </div>
+          </div>
+
+          {/* TAGS */}
+          <div className="col-12">
+            <label className="form-label text-muted2">Tags</label>
+
+            <div className="d-flex flex-wrap gap-2 mb-2">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="badge rounded-pill bg-primary"
+                >
+                  #{tag}
+                  <button
+                    onClick={() => removeTag(tag)}
+                    className="btn btn-sm text-light p-0 ms-2"
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+            </div>
+
+            <input
+              placeholder="Type tag and press Enter"
+              className="form-control bg-transparent text-light border-secondary"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addTag(tagInput);
+                }
+              }}
+            />
+          </div>
+        </div>
+
+        {/* ROUNDS */}
+        <div className="mt-5">
+
+          <div className="d-flex justify-content-between mb-3">
+            <h4 className="fw-bold">Interview Rounds</h4>
 
             <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="btn btn-accent w-100 mt-4"
+              onClick={addRound}
+              className="btn btn-outline-light"
             >
-              {loading ? "Publishing..." : "Publish Experience"}
+              + Add Round
             </button>
-          </motion.div>
+          </div>
+
+          {rounds.map((round, rIndex) => (
+            <div key={rIndex} className="glass p-3 rounded-4 mb-3">
+
+              <div className="d-flex gap-2">
+
+                <input
+                  placeholder="Round name (OA, Technical...)"
+                  className="form-control bg-transparent text-light border-secondary"
+                  value={round.roundName}
+                  onChange={(e) =>
+                    updateRoundField(
+                      rIndex,
+                      "roundName",
+                      e.target.value,
+                    )
+                  }
+                />
+
+                <button
+                  onClick={() => removeRound(rIndex)}
+                  className="btn btn-danger"
+                  disabled={rounds.length === 1}
+                >
+                  🗑
+                </button>
+
+              </div>
+
+              <textarea
+                placeholder="Describe this round..."
+                className="form-control bg-transparent text-light border-secondary mt-2"
+                value={round.description}
+                onChange={(e) =>
+                  updateRoundField(
+                    rIndex,
+                    "description",
+                    e.target.value,
+                  )
+                }
+              />
+
+              {round.questions.map((q, qIndex) => (
+                <div key={qIndex} className="d-flex gap-2 mt-2">
+
+                  <input
+                    placeholder="Interview question..."
+                    className="form-control bg-transparent text-light border-secondary"
+                    value={q}
+                    onChange={(e) =>
+                      updateQuestion(
+                        rIndex,
+                        qIndex,
+                        e.target.value,
+                      )
+                    }
+                  />
+
+                  <button
+                    className="btn btn-outline-danger"
+                    onClick={() =>
+                      removeQuestion(rIndex, qIndex)
+                    }
+                  >
+                    ✕
+                  </button>
+
+                </div>
+              ))}
+
+              <button
+                onClick={() => addQuestion(rIndex)}
+                className="btn btn-sm btn-outline-light mt-2"
+              >
+                + Add Question
+              </button>
+
+            </div>
+          ))}
         </div>
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="btn btn-accent w-100 mt-4"
+        >
+          {loading ? "Publishing..." : "Publish Experience"}
+        </button>
+
       </div>
     </div>
   );

@@ -13,6 +13,8 @@ const userRoutes = require('./routes/user.routes');
 const commentRoutes = require('./routes/comment.routes')
 const analyticsRoutes = require("./routes/analytics.routes");
 const adminRoutes = require("./routes/admin.routes");
+const notificationRoutes = require("./routes/notification.routes");
+const reportRoutes = require("./routes/report.routes");
 
 const { errorHandler, notFound } = require('./middlewares/error.middleware');
 const { authLimiter, apiLimiter, adminLimiter, globalLimiter } = require('./middlewares/rateLimit.middleware');
@@ -70,7 +72,10 @@ app.use("/api/posts", apiLimiter, postRoutes);
 app.use("/api/users", apiLimiter, userRoutes);
 app.use("/api/comments", apiLimiter, commentRoutes);
 app.use("/api/analytics", analyticsRoutes);
+
 app.use("/api/admin", adminLimiter, adminRoutes);
+app.use("/api/notifications", apiLimiter, notificationRoutes);
+app.use("/api/reports", apiLimiter, reportRoutes);
 
 app.get("/health", (req, res) => {
     res.json({ status: "ok" });
