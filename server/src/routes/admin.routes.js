@@ -11,6 +11,8 @@ const {
   toggleAdminRole,
 } = require("../controllers/admin.controller");
 
+const { getReports, updateReportStatus, } = require("../controllers/report.controller");
+
 const router = express.Router();
 
 /**
@@ -29,5 +31,9 @@ router.delete("/posts/:id", adminDeletePost);
 router.get("/users", getAllUsersAdmin);
 router.patch("/users/:id/ban", toggleBanUser);
 router.patch("/users/:id/role", toggleAdminRole);
+
+//REPORTS
+router.get("/reports", getReports);
+router.patch("/reports/:id", updateReportStatus);
 
 module.exports = router;

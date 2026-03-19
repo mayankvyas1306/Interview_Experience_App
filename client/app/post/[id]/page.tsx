@@ -24,11 +24,13 @@ type PostDetails = {
   upvotesCount: number;
   createdAt: string;
   rounds: Round[];
+  isAnonymous: boolean;
   authorId?: {
+    _id?: string;
     fullName?: string;
     college?: string;
     year?: number;
-  };
+  } | null;  // ← add null here for anonymous posts
 };
 
 type Comment = {
@@ -72,6 +74,9 @@ export default function PostDetailsPage() {
   const [saving, setSaving] = useState(false);
 
   const [isSaved, setIsSaved] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [hasReported, setHasReported] = useState(false);
+
 
   // ✅ ADDED STATE
   const [isUpvoted, setIsUpvoted] = useState(false);
@@ -213,6 +218,42 @@ export default function PostDetailsPage() {
       toast.error(err?.response?.data?.message || "Save failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+
+  const handleReport = async () => {
+    if (!user) {
+      toast.error("Please login to report posts");
+      router.push("/auth/login");
+      return;
+    }
+
+    if (hasReported || reporting) return;
+
+    const reason = prompt(
+      "Why are you reporting this post?\n\nOptions: spam, inappropriate, fake, harassment, other\n\nType one of the above:"
+    );
+
+    if (!reason) return;
+
+    const validReasons = ["spam", "inappropriate", "fake", "harassment", "other"];
+    if (!validReasons.includes(reason.toLowerCase().trim())) {
+      toast.error("Invalid reason. Use: spam, inappropriate, fake, harassment, or other");
+      return;
+    }
+
+    try {
+      setReporting(true);
+      await api.post(`/reports/${postId}`, { reason: reason.toLowerCase().trim() });
+      setHasReported(true);
+      toast.success("Report submitted. Thank you for keeping the community safe.");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to submit report";
+      toast.error(msg);
+      if (err?.response?.status === 409) setHasReported(true);
+    } finally {
+      setReporting(false);
     }
   };
 
@@ -372,6 +413,16 @@ export default function PostDetailsPage() {
               )}
               {isSaved ? "Saved" : "Save"}
             </button>
+            <button
+              onClick={handleReport}
+              disabled={reporting || hasReported}
+              className="btn btn-outline-secondary rounded-3"
+              title={hasReported ? "Already reported" : "Report post"}
+            >
+              <i className={`bi ${hasReported ? "bi-flag-fill" : "bi-flag"} me-1`}></i>
+              {hasReported ? "Reported" : "Report"}
+            </button>
+
           </div>
         </div>
       </motion.div>

@@ -42,7 +42,7 @@ export default function ProfilePage() {
       setLoading(false);
     }
   };
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchProfile();
   }, []);
@@ -87,7 +87,7 @@ export default function ProfilePage() {
         </div>
       ) : user ? (
         <div className="row g-4">
-          {/* Left Card */}
+          {/* LEFT CARD */}
           <div className="col-lg-5">
             <div className="glass rounded-4 p-4">
               <div className="d-flex align-items-center gap-3">
@@ -129,9 +129,11 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Right Stats */}
+          {/* RIGHT STATS */}
           <div className="col-lg-7">
             <div className="row g-3">
+
+              {/* SAVED POSTS */}
               <div className="col-md-6">
                 <div className="glass rounded-4 p-4 h-100">
                   <div className="text-muted2 small">Saved Posts</div>
@@ -139,6 +141,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* STATUS */}
               <div className="col-md-6">
                 <div className="glass rounded-4 p-4 h-100">
                   <div className="text-muted2 small">Status</div>
@@ -146,6 +149,23 @@ export default function ProfilePage() {
                 </div>
               </div>
 
+              {/* ⭐ REPUTATION CARD */}
+              <div className="col-md-6">
+                <div className="glass rounded-4 p-4 h-100">
+                  <div className="text-muted2 small">Reputation</div>
+                  <div className="fw-bold display-6">
+                    {(user as any).reputation || 0}
+                  </div>
+
+                  <div className="text-muted2 small mt-1">
+                    <span className="badge bg-primary bg-opacity-50">
+                      {(user as any).rank || "Newcomer"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* GOAL */}
               <div className="col-12">
                 <div className="glass rounded-4 p-4">
                   <h5 className="fw-bold">Next Goal 🚀</h5>
@@ -155,10 +175,11 @@ export default function ProfilePage() {
                   </p>
                 </div>
               </div>
+
             </div>
           </div>
 
-          {/* Saved Posts */}
+          {/* SAVED POSTS SECTION */}
           <div className="col-12">
             <div className="glass rounded-4 p-4">
               <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
@@ -188,6 +209,7 @@ export default function ProfilePage() {
                             <h6 className="fw-bold mb-1">{post.companyName}</h6>
                             <div className="text-muted2 small">{post.role}</div>
                           </div>
+
                           <button
                             type="button"
                             className="btn btn-outline-light btn-sm"
@@ -197,6 +219,7 @@ export default function ProfilePage() {
                             {savingId === post._id ? "Updating..." : "Unsave"}
                           </button>
                         </div>
+
                         <div className="mt-3">
                           <a
                             href={`/post/${post._id}`}
@@ -213,6 +236,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* MY POSTS */}
           <div className="col-12">
             <div className="glass rounded-4 p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -245,6 +269,7 @@ export default function ProfilePage() {
                         <div className="text-muted2 small mb-3">
                           {new Date(post.createdAt).toLocaleDateString()}
                         </div>
+
                         <div className="d-flex gap-2">
                           <Link
                             href={`/post/${post._id}`}
@@ -252,6 +277,7 @@ export default function ProfilePage() {
                           >
                             View
                           </Link>
+
                           <Link
                             href={`/edit/${post._id}`}
                             className="btn btn-accent btn-sm"
@@ -266,6 +292,7 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+
         </div>
       ) : (
         <div className="text-center text-muted2">No user data found.</div>

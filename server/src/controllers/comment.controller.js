@@ -1,6 +1,7 @@
 const Comment = require("../models/Comment");
 const Post = require("../models/Post");
 const AppError = require("../utils/AppError");
+const { createNotification } = require("../utils/notificationHelper");
 
 //add comment to a post
 const addComment = async (req, res, next) => {
@@ -34,6 +35,15 @@ const addComment = async (req, res, next) => {
         // Wait, schema validation runs on req.body.
         // If I change schema to `text` it will validation `text`.
         // I should probably fix the logic below after I check schema.
+
+        //Notify post author (fire and forget)
+        createNotification({
+            recipientId: post.authorId,
+            senderId: req.user._id,
+            type: "comment",
+            postId: post._id,
+            message: `${req.user.fullName} commented on your post at ${post.companyName}`,
+        });
 
         res.status(201).json({
             message: "Comment added successfully",

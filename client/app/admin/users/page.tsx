@@ -44,7 +44,11 @@ export default function AdminUsersPage() {
 
   return (
     <div className="container py-5">
-      <h2 className="fw-bold mb-4">Manage Users</h2>
+      <div className="d-flex gap-3 align-items-center mb-4 flex-wrap">
+        <h2 className="fw-bold mb-0">Manage Users</h2>
+        <a href="/admin/posts" className="btn btn-outline-secondary rounded-3 btn-sm">Posts</a>
+        <a href="/admin/reports" className="btn btn-outline-warning rounded-3 btn-sm">Reports</a>
+      </div>
 
       <div className="glass rounded-4 p-4">
         <table className="table table-dark table-hover align-middle">
@@ -66,9 +70,8 @@ export default function AdminUsersPage() {
 
                 <td>
                   <span
-                    className={`badge ${
-                      u.role === "admin" ? "bg-danger" : "bg-secondary"
-                    }`}
+                    className={`badge ${u.role === "admin" ? "bg-danger" : "bg-secondary"
+                      }`}
                   >
                     {u.role}
                   </span>
