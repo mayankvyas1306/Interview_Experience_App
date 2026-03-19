@@ -21,7 +21,7 @@ const createNotification = async ({
 }) => {
 
     //Don't notify user about their own actions
-    if (senderId && String(senderId) === recipientId) {
+    if (senderId && String(senderId) === String(recipientId)) {
         return null;
     }
 
@@ -43,7 +43,7 @@ const createNotification = async ({
             recipientId,
             senderId,
             type,
-            postid: postId || null,
+            postId: postId || null,
             message,
         });
 

@@ -32,8 +32,7 @@ export default function CreatePage() {
   const [difficulty, setDifficulty] =
     useState<"Easy" | "Medium" | "Hard">("Medium");
 
-  const [result, setResult] =
-    useState<"Selected" | "Rejected" | "Pending">("Pending");
+  const [result, setResult] = useState<"Selected" | "Rejected" | "Waiting">("Waiting");
 
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -182,13 +181,11 @@ export default function CreatePage() {
 
       <div className="glass rounded-4 p-4">
 
-        {/* BASIC INFO */}
         <div className="row g-3">
 
           <div className="col-md-6">
             <label className="form-label text-muted2">Company Name</label>
             <input
-              placeholder="Google, Amazon..."
               className="form-control bg-transparent text-light border-secondary"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
@@ -198,86 +195,10 @@ export default function CreatePage() {
           <div className="col-md-6">
             <label className="form-label text-muted2">Role</label>
             <input
-              placeholder="SDE Intern, Backend Engineer..."
               className="form-control bg-transparent text-light border-secondary"
               value={role}
               onChange={(e) => setRole(e.target.value)}
             />
-          </div>
-
-          {/* DIFFICULTY */}
-          <div className="col-md-6">
-            <label className="form-label text-muted2">Difficulty</label>
-
-            <div className="d-flex gap-2">
-              {["Easy", "Medium", "Hard"].map((level) => (
-                <button
-                  key={level}
-                  type="button"
-                  onClick={() =>
-                    setDifficulty(level as "Easy" | "Medium" | "Hard")
-                  }
-                  className={`btn rounded-pill px-3 ${difficulty === level
-                    ? "btn-accent"
-                    : "btn-outline-light"
-                    }`}
-                >
-                  {level}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* RESULT */}
-          <div className="col-md-6">
-            <label className="form-label text-muted2">Result</label>
-
-            <div className="d-flex gap-2">
-              {["Pending", "Selected", "Rejected"].map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() =>
-                    setResult(
-                      r as "Pending" | "Selected" | "Rejected",
-                    )
-                  }
-                  className={`btn rounded-pill px-3 ${result === r
-                    ? r === "Selected"
-                      ? "btn-success"
-                      : r === "Rejected"
-                        ? "btn-danger"
-                        : "btn-warning"
-                    : "btn-outline-light"
-                    }`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ANONYMOUS */}
-          <div className="col-12">
-            <div
-              className="glass rounded-3 p-3 d-flex justify-content-between align-items-center"
-              style={{ cursor: "pointer" }}
-              onClick={() => setIsAnonymous(!isAnonymous)}
-            >
-              <div>
-                <div className="fw-semibold">Post Anonymously</div>
-                <div className="text-muted2 small">
-                  Hide your name and college publicly
-                </div>
-              </div>
-
-              <div
-                className={`badge ${isAnonymous ? "bg-primary" : "bg-secondary"
-                  }`}
-              >
-                {isAnonymous ? "ON" : "OFF"}
-              </div>
-            </div>
           </div>
 
           {/* TAGS */}
@@ -286,10 +207,7 @@ export default function CreatePage() {
 
             <div className="d-flex flex-wrap gap-2 mb-2">
               {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="badge rounded-pill bg-primary"
-                >
+                <span key={tag} className="badge rounded-pill bg-primary">
                   #{tag}
                   <button
                     onClick={() => removeTag(tag)}
@@ -302,7 +220,6 @@ export default function CreatePage() {
             </div>
 
             <input
-              placeholder="Type tag and press Enter"
               className="form-control bg-transparent text-light border-secondary"
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
@@ -313,101 +230,40 @@ export default function CreatePage() {
                 }
               }}
             />
-          </div>
-        </div>
 
-        {/* ROUNDS */}
-        <div className="mt-5">
-
-          <div className="d-flex justify-content-between mb-3">
-            <h4 className="fw-bold">Interview Rounds</h4>
-
+            {/* ✅ ADDED AI TAG SUGGESTION BUTTON */}
             <button
-              onClick={addRound}
-              className="btn btn-outline-light"
-            >
-              + Add Round
-            </button>
-          </div>
-
-          {rounds.map((round, rIndex) => (
-            <div key={rIndex} className="glass p-3 rounded-4 mb-3">
-
-              <div className="d-flex gap-2">
-
-                <input
-                  placeholder="Round name (OA, Technical...)"
-                  className="form-control bg-transparent text-light border-secondary"
-                  value={round.roundName}
-                  onChange={(e) =>
-                    updateRoundField(
-                      rIndex,
-                      "roundName",
-                      e.target.value,
-                    )
-                  }
-                />
-
-                <button
-                  onClick={() => removeRound(rIndex)}
-                  className="btn btn-danger"
-                  disabled={rounds.length === 1}
-                >
-                  🗑
-                </button>
-
-              </div>
-
-              <textarea
-                placeholder="Describe this round..."
-                className="form-control bg-transparent text-light border-secondary mt-2"
-                value={round.description}
-                onChange={(e) =>
-                  updateRoundField(
-                    rIndex,
-                    "description",
-                    e.target.value,
-                  )
+              type="button"
+              onClick={async () => {
+                if (!companyName.trim() && !role.trim()) {
+                  toast.error("Enter company name and role first");
+                  return;
                 }
-              />
+                try {
+                  const res = await api.post("/ai/suggest-tags", {
+                    companyName,
+                    role,
+                    rounds,
+                  });
+                  const suggested = res.data.tags.filter(
+                    (t: string) => !tags.includes(t)
+                  );
+                  if (suggested.length === 0) {
+                    toast("No new tags to suggest", { icon: "ℹ️" });
+                  } else {
+                    setTags((prev) => [...prev, ...suggested]);
+                    toast.success(`Added ${suggested.length} suggested tags ✨`);
+                  }
+                } catch {
+                  toast.error("Failed to suggest tags");
+                }
+              }}
+              className="btn btn-sm btn-outline-secondary rounded-3 mt-2"
+            >
+              ✨ Suggest Tags with AI
+            </button>
 
-              {round.questions.map((q, qIndex) => (
-                <div key={qIndex} className="d-flex gap-2 mt-2">
-
-                  <input
-                    placeholder="Interview question..."
-                    className="form-control bg-transparent text-light border-secondary"
-                    value={q}
-                    onChange={(e) =>
-                      updateQuestion(
-                        rIndex,
-                        qIndex,
-                        e.target.value,
-                      )
-                    }
-                  />
-
-                  <button
-                    className="btn btn-outline-danger"
-                    onClick={() =>
-                      removeQuestion(rIndex, qIndex)
-                    }
-                  >
-                    ✕
-                  </button>
-
-                </div>
-              ))}
-
-              <button
-                onClick={() => addQuestion(rIndex)}
-                className="btn btn-sm btn-outline-light mt-2"
-              >
-                + Add Question
-              </button>
-
-            </div>
-          ))}
+          </div>
         </div>
 
         <button

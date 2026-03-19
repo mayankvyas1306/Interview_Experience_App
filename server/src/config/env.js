@@ -26,6 +26,7 @@ const env = {
   JWT_COOKIE_EXPIRES_DAYS: Number(getEnv("JWT_COOKIE_EXPIRES_DAYS", "7")),
   MONGO_URI: getEnv("MONGO_URI"),
   JWT_SECRET: getEnv("JWT_SECRET"),
+  GEMINI_API_KEY: getEnv("GEMINI_API_KEY"),
 };
 
 module.exports = { env, validateEnv };

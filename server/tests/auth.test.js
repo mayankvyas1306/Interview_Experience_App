@@ -22,14 +22,13 @@ describe("Auth API", () => {
         email: `test${Date.now()}@example.com`,
         password: "password123",
         college: "Test College",
-        year: 2024
+        year: 2
     };
 
     it("should register a new user", async () => {
         const res = await request(app)
             .post("/api/auth/register")
             .send(testUser);
-
         expect(res.statusCode).toEqual(201);
         expect(res.body).toHaveProperty("token");
         expect(res.body.user).toHaveProperty("email", testUser.email);

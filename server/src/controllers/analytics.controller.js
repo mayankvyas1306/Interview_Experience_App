@@ -281,9 +281,7 @@ const getUserAnalytics = async (req, res, next) => {
     const totalPosts = userPosts.length;
     const totalUpvotes = userPosts.reduce((acc, post) => acc + (post.upvotesCount || 0), 0);
 
-    // Calculate rank (percentile) - simplified
-    // In a real app, this would be a separate count query
-    const totalUsers = await Post.distinct("authorId").then(ids => ids.length);
+
     // Simple mock rank logic
     const topPercent = totalPosts > 5 ? "Top 10%" : totalPosts > 0 ? "Contributor" : "Newcomer";
 

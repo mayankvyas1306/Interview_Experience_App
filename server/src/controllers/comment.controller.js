@@ -20,16 +20,7 @@ const addComment = async (req, res, next) => {
         const comment = await Comment.create({
             postId,
             userId: req.user._id,
-            text, // text is mapped from req.body.content in frontend, let's check schema
-            // Wait, schema check: addCommentSchema expects "content", controller expects "text".
-            // I should prob update schema to match controller or vice versa.
-            // Client likely sends { text: "..." } if controller used to expect { text }.
-            // The schema I wrote expects "content". 
-            // I will fix schema to expect "text" in next step if generic replace fails.
-            // For now assuming we sync them. 
-            // Actually, let's fix controller to use "content" if schema uses content, OR fix schema.
-            // Existing controller used `req.body.text`.
-            // I will stick to `text` to match existing API contract.
+            text,
         });
 
         // Wait, schema validation runs on req.body.
