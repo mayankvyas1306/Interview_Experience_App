@@ -6,22 +6,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast"; // ✅ FIX: No Toaster import
 import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-
-type Post = {
-  _id: string;
-  companyName: string;
-  role: string;
-  tags: string[];
-  difficulty: "Easy" | "Medium" | "Hard";
-  result: "Selected" | "Rejected" | "Waiting";
-  upvotesCount: number;
-  createdAt: string;
-  authorId?: {
-    fullName?: string;
-    college?: string;
-    year?: number;
-  };
-};
+import type { Post } from "@/types/api";
 
 const DIFFICULTY_COLOR: Record<string, string> = {
   Easy: "#00FFB2",

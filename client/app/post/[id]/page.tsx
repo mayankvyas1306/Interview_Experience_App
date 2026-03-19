@@ -24,11 +24,13 @@ type PostDetails = {
   upvotesCount: number;
   createdAt: string;
   rounds: Round[];
+  isAnonymous: boolean;
   authorId?: {
+    _id?: string;
     fullName?: string;
     college?: string;
     year?: number;
-  };
+  } | null;  // ← add null here for anonymous posts
 };
 
 type Comment = {
