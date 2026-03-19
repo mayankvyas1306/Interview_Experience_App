@@ -4,6 +4,7 @@ const morgan = require('morgan');
 const helmet = require("helmet");
 const { env } = require("./config/env");
 const logger = require("./utils/logger");
+const aiRoutes = require("./routes/ai.routes");
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/admin", adminLimiter, adminRoutes);
 app.use("/api/notifications", apiLimiter, notificationRoutes);
 app.use("/api/reports", apiLimiter, reportRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.get("/health", (req, res) => {
     res.json({ status: "ok" });

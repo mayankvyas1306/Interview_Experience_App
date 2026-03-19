@@ -114,6 +114,17 @@ export default function Navbar() {
                 <i className="bi bi-plus-circle me-2"></i>
                 Share
               </Link>
+
+              <Link
+                href="/ai-prep"
+                className={`text-decoration-none px-3 py-2 rounded-3 ${isActive("/ai-prep") ? "glass text-light" : "text-muted2"
+                  }`}
+              >
+                <i className="bi bi-stars me-2"></i>
+                AI Prep
+              </Link>
+
+
             </div>
 
             {/* ✅ Search */}
@@ -217,6 +228,13 @@ export default function Navbar() {
                   className="btn btn-outline-light rounded-3 text-start"
                 >
                   <i className="bi bi-plus-circle me-2"></i> Share
+                </Link>
+
+                <Link
+                  href="/ai-prep"
+                  className="btn btn-outline-light rounded-3 text-start"
+                >
+                  <i className="bi bi-stars me-2"></i> AI Prep
                 </Link>
 
                 <form onSubmit={handleSearch} className="mt-2">

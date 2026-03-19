@@ -48,6 +48,7 @@ jobs:
       JWT_COOKIE_EXPIRES_DAYS: 7
       MONGO_URI: mongodb://localhost:27017/interview_experience_app
       JWT_SECRET: test-secret
+      GEMINI_API_KEY: test-key
     steps:
       - name: Checkout
         uses: actions/checkout@v4
