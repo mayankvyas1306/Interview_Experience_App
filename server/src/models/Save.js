@@ -3,12 +3,12 @@ const mongoose = require("mongoose");
 const saveSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        res: "User",
+        ref: "User",
         required: true,
     },
     postId: {
         type: mongoose.Schema.Types.ObjectId,
-        res: "Post",
+        ref: "Post",
         required: true,
     },
 }, { timestamps: true });

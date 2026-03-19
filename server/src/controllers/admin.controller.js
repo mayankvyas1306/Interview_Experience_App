@@ -26,7 +26,7 @@ const getAllPostsAdmin = async (req, res, next) => {
     try {
 
         const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.max(1, Number(req.query.limit) || 20, 100);
+        const limit = Math.min(Math.max(1, Number(req.query.limit) || 20), 100);
         const skip = (page - 1) * limit;
 
         const [posts, total] = await Promise.all([
@@ -65,7 +65,7 @@ const adminDeletePost = async (req, res, next) => {
 const getAllUsersAdmin = async (req, res, next) => {
     try {
         const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.min(Number(req.query.limit) || 20, 100);
+        const limit = Math.min(Math.max(1, Number(req.query.limit) || 20), 100);
         const skip = (page - 1) * limit;
 
         const [users, total] = await Promise.all([

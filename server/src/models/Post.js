@@ -58,6 +58,10 @@ const postSchema = new mongoose.Schema({
         default: 0,
         min: 0,
     },
+    isAnonymous: {
+        type: Boolean,
+        default: false,
+    }
 }, { timestamps: true });
 
 postSchema.index({ companyName: 1, createdAt: -1 });

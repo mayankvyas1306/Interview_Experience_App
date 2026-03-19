@@ -32,8 +32,7 @@ export default function CreatePage() {
   const [difficulty, setDifficulty] =
     useState<"Easy" | "Medium" | "Hard">("Medium");
 
-  const [result, setResult] =
-    useState<"Selected" | "Rejected" | "Pending">("Pending");
+  const [result, setResult] = useState<"Selected" | "Rejected" | "Waiting">("Waiting");
 
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -233,15 +232,11 @@ export default function CreatePage() {
             <label className="form-label text-muted2">Result</label>
 
             <div className="d-flex gap-2">
-              {["Pending", "Selected", "Rejected"].map((r) => (
+              {["Waiting", "Selected", "Rejected"].map((r) => (
                 <button
                   key={r}
                   type="button"
-                  onClick={() =>
-                    setResult(
-                      r as "Pending" | "Selected" | "Rejected",
-                    )
-                  }
+                  onClick={() => setResult(r as "Waiting" | "Selected" | "Rejected")}
                   className={`btn rounded-pill px-3 ${result === r
                     ? r === "Selected"
                       ? "btn-success"
