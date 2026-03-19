@@ -15,8 +15,8 @@ import {
   Cell,
   PieChart,
   Pie,
-  Sector,
 } from "recharts";
+import Image from "next/image";
 import Link from "next/link";
 import SkeletonCard from "@/components/SkeletonCard";
 import { useAuth } from "@/context/AuthContext";
@@ -104,7 +104,7 @@ export default function AnalyticsPage() {
       setLoading(true);
       const res = await api.get(`/analytics/company-stats?company=${encodeURIComponent(company)}`);
       setSelectedCompanyData(res.data);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load company stats");
     } finally {
       setLoading(false);
@@ -129,16 +129,16 @@ export default function AnalyticsPage() {
 
   // --- EFFECTS ---
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
-    fetchCompanies(); // This triggers initial company load
-
-    // Lazy load other tabs data to speed up initial render
+    fetchCompanies();
     fetchTopicStats();
     fetchTrendingStats();
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (activeTab === "me" && !userStats) {
       fetchUserStats();
@@ -384,11 +384,13 @@ export default function AnalyticsPage() {
       <motion.div variants={TAB_VARIANTS} initial="hidden" animate="visible" exit="exit">
         <div className="glass p-5 rounded-4 mb-4 text-center position-relative overflow-hidden">
           <div className="position-relative z-1">
-            <img
+            <Image
               src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
               alt="avatar"
+              width={80}
+              height={80}
               className="rounded-circle mb-3 border border-4 border-dark shadow-lg"
-              style={{ width: 80, height: 80 }}
+              unoptimized
             />
             <h2 className="fw-bold mb-1">Hello, {user.fullName.split(" ")[0]}! 👋</h2>
             <p className="text-muted2">Here is your impact on the community.</p>

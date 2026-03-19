@@ -1,4 +1,5 @@
 const Notification = require("../models/Notification");
+const { sendToUser } = require("./sseManager");
 
 /**
  * Create a notification and push it to the recipient via SSE if connected.

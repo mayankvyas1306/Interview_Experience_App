@@ -13,7 +13,7 @@ type Round = {
   questions: string[];
 };
 
-const AVAILABLE_TAGS = [
+const TAGS = [
   "DSA",
   "DBMS",
   "OS",
@@ -218,8 +218,8 @@ export default function CreatePage() {
                     setDifficulty(level as "Easy" | "Medium" | "Hard")
                   }
                   className={`btn rounded-pill px-3 ${difficulty === level
-                      ? "btn-accent"
-                      : "btn-outline-light"
+                    ? "btn-accent"
+                    : "btn-outline-light"
                     }`}
                 >
                   {level}
@@ -243,12 +243,12 @@ export default function CreatePage() {
                     )
                   }
                   className={`btn rounded-pill px-3 ${result === r
-                      ? r === "Selected"
-                        ? "btn-success"
-                        : r === "Rejected"
-                          ? "btn-danger"
-                          : "btn-warning"
-                      : "btn-outline-light"
+                    ? r === "Selected"
+                      ? "btn-success"
+                      : r === "Rejected"
+                        ? "btn-danger"
+                        : "btn-warning"
+                    : "btn-outline-light"
                     }`}
                 >
                   {r}

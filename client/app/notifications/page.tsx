@@ -106,7 +106,7 @@ export default function NotificationsPage() {
                     <i className="bi bi-bell-slash fs-1 d-block mb-3 text-muted2"></i>
                     <h4 className="fw-bold">No notifications yet</h4>
                     <p className="text-muted2">
-                        When someone upvotes or comments on your posts, you'll see it here.
+                        When someone upvotes or comments on your posts, you&apos;ll see it here.
                     </p>
                     <Link href="/explore" className="btn btn-accent rounded-3 mt-2">
                         Explore Posts

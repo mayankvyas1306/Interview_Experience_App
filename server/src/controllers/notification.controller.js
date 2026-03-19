@@ -6,24 +6,26 @@ const { addConnection, removeConnection } = require("../utils/sseManager");
 const streamNotifications = (req, res) => {
     const userId = String(req.user._id);
 
-    //set SSE headers
+    // Set SSE headers FIRST before anything else
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
-    res.flushHeaders();//send headers immediately
 
-    //register this connection
+    // Flush headers immediately so the client knows the stream started
+    res.flushHeaders();
+
     addConnection(userId, res);
 
-    //send a "connected" event so the client knows its working
-    re.write(`event: connected\n`);
-    res.write(`data: ${JSON.stringify({ message: "Connected to notification stream" })}\n\n`);
+    res.write(`event: connected\ndata: ${JSON.stringify({ message: "Connected" })}\n\n`);
 
-    //Heartbeat every 30 seconds to keep the connection alive through proxies
     const heartbeat = setInterval(() => {
+        if (res.writableEnded) {
+            clearInterval(heartbeat);
+            return;
+        }
         try {
-            res.write(`:heartbeat\n\n`);
+            res.write(`: heartbeat\n\n`);
         } catch {
             clearInterval(heartbeat);
         }
@@ -34,7 +36,12 @@ const streamNotifications = (req, res) => {
         removeConnection(userId);
     });
 
-}
+    // Prevent Express error handler from touching this response
+    req.on("error", () => {
+        clearInterval(heartbeat);
+        removeConnection(userId);
+    });
+};
 
 const getNotifications = async (req, res, next) => {
     try {
