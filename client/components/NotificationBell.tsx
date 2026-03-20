@@ -15,6 +15,40 @@ type NotificationItem = {
     postId?: { _id: string; companyName: string } | null;
 };
 
+function timeAgo(dateString: string) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (diff < 60) return "Just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+}
+
+const renderMessage = (msg: string) => {
+    const upvoteMatch = msg.match(/^(.*?) upvoted your post at (.*?)$/);
+    const commentMatch = msg.match(/^(.*?) commented on your post at (.*?)$/);
+
+    if (upvoteMatch) {
+        return (
+            <>
+                <span className="fw-bold text-light">{upvoteMatch[1]}</span>
+                <span className="text-muted2 mx-1">upvoted your post at</span>
+                <span className="fw-bold" style={{ color: "rgba(0,212,255,0.9)" }}>{upvoteMatch[2]}</span>
+            </>
+        );
+    } else if (commentMatch) {
+        return (
+            <>
+                <span className="fw-bold text-light">{commentMatch[1]}</span>
+                <span className="text-muted2 mx-1">commented on your post at</span>
+                <span className="fw-bold" style={{ color: "rgba(109,94,249,0.9)" }}>{commentMatch[2]}</span>
+            </>
+        );
+    }
+    return <span className="text-light">{msg}</span>;
+};
+
 export default function NotificationBell() {
     const { user } = useAuth();
     const [unreadCount, setUnreadCount] = useState(0);
@@ -55,6 +89,7 @@ export default function NotificationBell() {
         es.addEventListener("notification", (e) => {
             const data = JSON.parse(e.data);
             setUnreadCount((prev) => prev + 1);
+            setNotifications((prev) => [data, ...prev]);
             toast(data.message, {
                 icon: data.type === "upvote" ? "⬆️" : "💬",
                 duration: 4000,
@@ -160,35 +195,76 @@ export default function NotificationBell() {
                             No notifications yet
                         </div>
                     ) : (
-                        <div>
-                            {notifications.map((n) => (
-                                <div
-                                    key={n._id}
-                                    className={`p-3 border-bottom border-secondary ${!n.read ? "bg-white bg-opacity-5" : ""
-                                        }`}
-                                >
-                                    <div className="d-flex gap-2 align-items-start">
-                                        <span className="fs-5">
-                                            {n.type === "upvote" ? "⬆️" : n.type === "comment" ? "💬" : "🔔"}
-                                        </span>
-                                        <div className="flex-grow-1">
-                                            <p className="mb-1 small text-light">{n.message}</p>
-                                            <div className="text-muted2" style={{ fontSize: "0.72rem" }}>
-                                                {new Date(n.createdAt).toLocaleDateString()}
+                        <div className="d-flex flex-column">
+                            {notifications.map((n) => {
+                                const isUnread = !n.read;
+                                const postUrl = n.postId ? `/post/${(n.postId as any)._id || n.postId}` : "#";
+
+                                return (
+                                    <Link
+                                        key={n._id}
+                                        href={postUrl}
+                                        onClick={() => setOpen(false)}
+                                        className="text-decoration-none"
+                                        style={{ display: "block" }}
+                                    >
+                                        <div
+                                            className={`p-3 border-bottom border-secondary d-flex gap-3 align-items-start ${
+                                                isUnread ? "bg-primary bg-opacity-10" : ""
+                                            }`}
+                                            style={{
+                                                borderLeft: isUnread ? "4px solid #6d5ef9" : "4px solid transparent",
+                                                transition: "background-color 0.2s ease"
+                                            }}
+                                        >
+                                            {/* Premium Icon Badge */}
+                                            <div
+                                                className="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                                                style={{
+                                                    width: "36px",
+                                                    height: "36px",
+                                                    background: n.type === "upvote" 
+                                                        ? "linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.05))"
+                                                        : n.type === "comment"
+                                                        ? "linear-gradient(135deg, rgba(109,94,249,0.2), rgba(109,94,249,0.05))"
+                                                        : "rgba(255,255,255,0.05)",
+                                                    border: n.type === "upvote"
+                                                        ? "1px solid rgba(0,212,255,0.3)"
+                                                        : n.type === "comment"
+                                                        ? "1px solid rgba(109,94,249,0.3)"
+                                                        : "1px solid rgba(255,255,255,0.1)",
+                                                }}
+                                            >
+                                                {n.type === "upvote" ? (
+                                                    <i className="bi bi-arrow-up text-info fs-5"></i>
+                                                ) : n.type === "comment" ? (
+                                                    <i className="bi bi-chat-fill text-accent fs-6"></i>
+                                                ) : (
+                                                    <i className="bi bi-bell-fill text-light fs-6"></i>
+                                                )}
                                             </div>
-                                            {n.postId && (
-                                                <Link
-                                                    href={`/post/${(n.postId as any)._id || n.postId}`}
-                                                    className="text-primary small text-decoration-none"
-                                                    onClick={() => setOpen(false)}
-                                                >
-                                                    View post →
-                                                </Link>
-                                            )}
+
+                                            {/* Content Block */}
+                                            <div className="flex-grow-1">
+                                                <div className="mb-1 small text-light" style={{ lineHeight: "1.4" }}>
+                                                    {renderMessage(n.message)}
+                                                </div>
+                                                <div className="d-flex align-items-center justify-content-between mt-2">
+                                                    <span className="text-muted2" style={{ fontSize: "0.75rem", fontWeight: "500" }}>
+                                                        {timeAgo(n.createdAt)}
+                                                    </span>
+                                                    {isUnread && (
+                                                        <span 
+                                                            className="rounded-circle bg-primary shadow-sm" 
+                                                            style={{ width: "8px", height: "8px", display: "inline-block" }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                            ))}
+                                    </Link>
+                                );
+                            })}
                         </div>
                     )}
                 </div>

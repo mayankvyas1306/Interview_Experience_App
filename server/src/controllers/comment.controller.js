@@ -23,6 +23,8 @@ const addComment = async (req, res, next) => {
             text,
         });
 
+        await comment.populate("userId", "fullName college year");
+
         // Wait, schema validation runs on req.body.
         // If I change schema to `text` it will validation `text`.
         // I should probably fix the logic below after I check schema.

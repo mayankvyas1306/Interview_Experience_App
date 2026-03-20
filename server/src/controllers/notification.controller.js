@@ -1,5 +1,5 @@
 const Notification = require("../models/Notification");
-const { addConnection, removeConnection } = require("../utils/sseManager");
+const { addConnection, removeConnection, getConnectionCount } = require("../utils/sseManager");
 
 //SSE Stream-client connects here to receive real - time events
 
@@ -16,6 +16,7 @@ const streamNotifications = (req, res) => {
     res.flushHeaders();
 
     addConnection(userId, res);
+    console.log(`[SSE] ✅ Connection established for userId=${userId}. Active connections: ${getConnectionCount()}`);
 
     res.write(`event: connected\ndata: ${JSON.stringify({ message: "Connected" })}\n\n`);
 
@@ -32,14 +33,14 @@ const streamNotifications = (req, res) => {
     }, 30000);
 
     req.on("close", () => {
+        console.log(`[SSE] ❌ Connection closed for userId=${userId}`);
         clearInterval(heartbeat);
-        removeConnection(userId);
+        // sseManager handles res.on('close') for the individual connection cleanly.
     });
 
-    // Prevent Express error handler from touching this response
     req.on("error", () => {
+        console.log(`[SSE] ⚠️ Connection error for userId=${userId}`);
         clearInterval(heartbeat);
-        removeConnection(userId);
     });
 };
 

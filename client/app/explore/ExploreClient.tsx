@@ -10,6 +10,20 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import type { Post } from "@/types/api";
 import SkeletonCard from "@/components/SkeletonCard";
 
+// Custom debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+}
+
 const TAGS = ["DSA", "DBMS", "OS", "CN", "OOP", "System Design", "Aptitude"];
 
 const normalizeSort = (raw: string | null): "latest" | "top" => {
@@ -29,6 +43,9 @@ export default function ExploreClient() {
   const [tag, setTag] = useState("");
   const [sort, setSort] = useState<"latest" | "top">(sortFromUrl);
 
+  const debouncedCompany = useDebounce(company, 400);
+  const debouncedTag = useDebounce(tag, 400);
+
   // ── Posts state ──
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,12 +61,12 @@ export default function ExploreClient() {
   const baseParams = useMemo(() => {
     const params = new URLSearchParams();
     params.set("limit", "6");
-    if (company.trim()) params.set("company", company.trim());
+    if (debouncedCompany.trim()) params.set("company", debouncedCompany.trim());
     if (difficulty) params.set("difficulty", difficulty);
-    if (tag.trim()) params.set("tag", tag.trim());
+    if (debouncedTag.trim()) params.set("tag", debouncedTag.trim());
     if (sort === "top") params.set("sort", "top");
     return params;
-  }, [company, difficulty, tag, sort]);
+  }, [debouncedCompany, difficulty, debouncedTag, sort]);
 
   // ── Fetch posts (first page OR next page) ──
   const fetchPosts = useCallback(
