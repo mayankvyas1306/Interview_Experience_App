@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import AdminSidebar from "@/components/AdminSidebar";
 
 export default function AdminLayout({
   children,
@@ -14,32 +15,22 @@ export default function AdminLayout({
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Give time for user to load from localStorage
-    const timer = setTimeout(() => {
-      setIsChecking(false);
-    }, 100);
-
+    // Give localStorage time to hydrate before checking auth
+    const timer = setTimeout(() => setIsChecking(false), 100);
     return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    // Only check after initial loading
     if (isChecking) return;
-
-    // If no user, redirect to login
     if (!user) {
       router.push("/auth/login");
       return;
     }
-
-    // If user is not admin, redirect to home
     if (user.role !== "admin") {
       router.push("/");
-      return;
     }
   }, [user, isChecking, router]);
 
-  // Show loading while checking
   if (isChecking || !user) {
     return (
       <div className="container py-5 text-center">
@@ -51,11 +42,15 @@ export default function AdminLayout({
     );
   }
 
-  // User is not admin (will redirect but show nothing meanwhile)
-  if (user.role !== "admin") {
-    return null;
-  }
+  if (user.role !== "admin") return null;
 
-  // All checks passed, show admin content
-  return <>{children}</>;
+  return (
+    // Side-by-side layout: sidebar on left, content on right
+    <div className="d-flex" style={{ minHeight: "calc(100vh - 80px)" }}>
+      <AdminSidebar />
+      <main className="flex-grow-1 overflow-auto">
+        {children}
+      </main>
+    </div>
+  );
 }
