@@ -1,41 +1,71 @@
-// ✅ MUST be first
+// ✅ MUST be first — loads .env for local dev
+// In CI, env vars are set directly by the workflow runner
 require("dotenv").config();
 
 const request = require("supertest");
 const mongoose = require("mongoose");
 const app = require("../src/app");
 
-// ─── SAFETY: Build test URI ───────────────────────────────────────────────────
-const getTestURI = () => {
-    const productionURI = process.env.MONGO_URI;
-    if (!productionURI) {
+// ─── Build a safe test database URI ──────────────────────────────────────────
+//
+// Strategy: never manipulate the URI if it already points to a test database.
+// Otherwise derive a test URI by inserting "interview_experience_test"
+// as the database name — handling all Atlas and local URI formats.
+//
+// Formats handled:
+//   mongodb+srv://host/?opts        (Atlas, trailing slash before ?)
+//   mongodb+srv://host?opts         (Atlas, no slash before ?)
+//   mongodb+srv://host/mydb?opts    (Atlas with db name)
+//   mongodb://localhost:27017/mydb  (local with db name)
+//   mongodb://localhost:27017       (local no db name)
+//   ""  or  undefined               (fallback to localhost)
+//
+const buildTestURI = () => {
+    const uri = process.env.MONGO_URI;
+
+    // No URI — use local fallback
+    if (!uri) {
         return "mongodb://localhost:27017/interview_experience_test";
     }
 
-    const testURI = productionURI.replace(
-        /(mongodb(?:\+srv)?:\/\/[^/]+\/)([^/?]+)(.*)/,
-        "$1interview_experience_test$3"
-    );
-
-    // SAFETY: If regex failed and URI didn't change, abort immediately
-    if (testURI === productionURI) {
-        throw new Error(
-            "SAFETY: Could not derive a test database URI. " +
-            "Check that MONGO_URI contains a database name in the path."
-        );
+    // Already pointing at the test database — use as-is (covers CI case)
+    if (uri.includes("interview_experience_test")) {
+        return uri;
     }
 
-    return testURI;
+    // Normalize: remove trailing slash immediately before ? or at end of string
+    // "mongodb+srv://host/?opts"  →  "mongodb+srv://host?opts"
+    // "mongodb+srv://host/"       →  "mongodb+srv://host"
+    const normalized = uri.replace(/\/\?/, "?").replace(/\/$/, "");
+
+    // Case A: URI already has a database name segment in the path
+    // Matches: everything-up-to-last-slash / db-name ? optional-query
+    const pathMatch = normalized.match(
+        /^(mongodb(?:\+srv)?:\/\/[^/]+\/)([^/?]+)(\?.*)?$/
+    );
+    if (pathMatch) {
+        const [, prefix, , query] = pathMatch;
+        return `${prefix}interview_experience_test${query || ""}`;
+    }
+
+    // Case B: No database name in path — insert before query string
+    if (normalized.includes("?")) {
+        return normalized.replace("?", "/interview_experience_test?");
+    }
+
+    // Case C: No database name, no query string
+    return `${normalized}/interview_experience_test`;
 };
 
-const TEST_MONGO_URI = getTestURI();
+const TEST_MONGO_URI = buildTestURI();
 
-// Show which database is being used (hide password)
+// Always visible in test output — confirms we're not on production
 console.log(
-    "Test database:",
-    TEST_MONGO_URI.replace(/:([^@]+)@/, ":***@")
+    "🧪 Test database URI:",
+    TEST_MONGO_URI.replace(/:([^:@]+)@/, ":***@")
 );
 
+// ─── Setup & Teardown ─────────────────────────────────────────────────────────
 beforeAll(async () => {
     if (mongoose.connection.readyState !== 0) {
         await mongoose.disconnect();
@@ -44,26 +74,29 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-    // SAFETY: Refuse to delete if not on a test database
     const currentDB = mongoose.connection.db?.databaseName ?? "";
 
-    if (!currentDB.includes("test")) {
-        console.error(
-            `SAFETY ABORT: Refusing to delete from "${currentDB}". ` +
-            `Name must contain "test".`
+    // Safety guard: only clean up if we're definitely on a test database
+    const isSafe =
+        currentDB.toLowerCase().includes("test") ||
+        currentDB.toLowerCase().includes("jest");
+
+    if (isSafe) {
+        const collections = mongoose.connection.collections;
+        await Promise.all(
+            Object.values(collections).map((col) => col.deleteMany({}))
         );
-        await mongoose.connection.close();
-        return;
+        console.log(`✅ Cleaned up test database: "${currentDB}"`);
+    } else {
+        console.error(
+            `⛔ SAFETY: Skipping cleanup — "${currentDB}" does not look like a test database`
+        );
     }
 
-    const collections = mongoose.connection.collections;
-    await Promise.all(
-        Object.values(collections).map((col) => col.deleteMany({}))
-    );
     await mongoose.connection.close();
 });
 
-// ─── Register ─────────────────────────────────────────────────────────────────
+// ─── POST /api/auth/register ──────────────────────────────────────────────────
 describe("POST /api/auth/register", () => {
     const testUser = {
         fullName: "Test User",
@@ -75,9 +108,11 @@ describe("POST /api/auth/register", () => {
 
     it("should register a new user and return token", async () => {
         const res = await request(app).post("/api/auth/register").send(testUser);
+
         if (res.status !== 201) {
             console.error("Register failed:", res.status, JSON.stringify(res.body));
         }
+
         expect(res.status).toBe(201);
         expect(res.body).toHaveProperty("token");
         expect(res.body.user).toMatchObject({
@@ -109,7 +144,7 @@ describe("POST /api/auth/register", () => {
     });
 });
 
-// ─── Login ────────────────────────────────────────────────────────────────────
+// ─── POST /api/auth/login ─────────────────────────────────────────────────────
 describe("POST /api/auth/login", () => {
     const credentials = {
         fullName: "Login Test User",
@@ -118,9 +153,11 @@ describe("POST /api/auth/login", () => {
     };
 
     beforeAll(async () => {
-        const res = await request(app).post("/api/auth/register").send(credentials);
+        const res = await request(app)
+            .post("/api/auth/register")
+            .send(credentials);
         if (res.status !== 201) {
-            console.error("Login beforeAll failed:", res.status, JSON.stringify(res.body));
+            console.error("Login setup failed:", res.status, JSON.stringify(res.body));
         }
     });
 
@@ -129,9 +166,11 @@ describe("POST /api/auth/login", () => {
             email: credentials.email,
             password: credentials.password,
         });
+
         if (res.status !== 200) {
             console.error("Login failed:", res.status, JSON.stringify(res.body));
         }
+
         expect(res.status).toBe(200);
         expect(res.body).toHaveProperty("token");
         expect(res.body.user.email).toBe(credentials.email);
@@ -155,7 +194,7 @@ describe("POST /api/auth/login", () => {
     });
 });
 
-// ─── Me ───────────────────────────────────────────────────────────────────────
+// ─── GET /api/auth/me ─────────────────────────────────────────────────────────
 describe("GET /api/auth/me", () => {
     let token = "";
 
@@ -165,17 +204,21 @@ describe("GET /api/auth/me", () => {
             email: `me_${Date.now()}@example.com`,
             password: "password123",
         });
+
         if (res.status !== 201) {
-            console.error("Me beforeAll failed:", res.status, JSON.stringify(res.body));
+            console.error("Me setup failed:", res.status, JSON.stringify(res.body));
         }
+
         token = res.body.token || "";
     });
 
     it("should return current user when authenticated", async () => {
         expect(token).toBeTruthy();
+
         const res = await request(app)
             .get("/api/auth/me")
             .set("Authorization", `Bearer ${token}`);
+
         expect(res.status).toBe(200);
         expect(res.body.user).toHaveProperty("email");
         expect(res.body.user).toHaveProperty("fullName");
