@@ -1,92 +1,90 @@
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
+const express = require("express");
+const cors = require("cors");
+const morgan = require("morgan");
 const helmet = require("helmet");
+
 const { env } = require("./config/env");
 const logger = require("./utils/logger");
-const aiRoutes = require("./routes/ai.routes");
+const requestId = require("./middlewares/requestId.middleware");
+const { errorHandler, notFound } = require("./middlewares/error.middleware");
+const {
+    authLimiter,
+    apiLimiter,
+    adminLimiter,
+    globalLimiter,
+} = require("./middlewares/rateLimit.middleware");
 
-const app = express();
-
-const authRoutes = require('./routes/auth.routes');
-const postRoutes = require('./routes/post.routes');
-const userRoutes = require('./routes/user.routes');
-const commentRoutes = require('./routes/comment.routes')
+// Route imports
+const authRoutes = require("./routes/auth.routes");
+const postRoutes = require("./routes/post.routes");
+const userRoutes = require("./routes/user.routes");
+const commentRoutes = require("./routes/comment.routes");
 const analyticsRoutes = require("./routes/analytics.routes");
 const adminRoutes = require("./routes/admin.routes");
 const notificationRoutes = require("./routes/notification.routes");
 const reportRoutes = require("./routes/report.routes");
+const aiRoutes = require("./routes/ai.routes");
 
-const { errorHandler, notFound } = require('./middlewares/error.middleware');
-const { authLimiter, apiLimiter, adminLimiter, globalLimiter } = require('./middlewares/rateLimit.middleware');
+const app = express();
 
-const allowedOrigins = env.CLIENT_URL.split(",").map((origin) => origin.trim());
+// ─── CORS ────────────────────────────────────────────────────────────────────
+const allowedOrigins = env.CLIENT_URL.split(",").map((o) => o.trim());
+
 app.use(
     cors({
         origin: (origin, callback) => {
-            if (!origin) {
-                return callback(null, true);
-            }
-            if (allowedOrigins.includes(origin)) {
-                return callback(null, true);
-            }
+            // Allow requests with no origin (mobile apps, curl, Postman)
+            if (!origin) return callback(null, true);
+            if (allowedOrigins.includes(origin)) return callback(null, true);
             return callback(new Error("Not allowed by CORS"));
         },
         credentials: true,
-    }),
-);//used to connect frontend or authorize frontend to access the backend
-app.use(express.json());// Converts incoming JSON payloads into req.body object
+    })
+);
 
+// ─── CORE MIDDLEWARE ──────────────────────────────────────────────────────────
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// ─── SECURITY ────────────────────────────────────────────────────────────────
+app.use(helmet());
+
+// ─── REQUEST TRACKING ────────────────────────────────────────────────────────
+// Must come before logging so logs include the request ID
+app.use(requestId);
+
+// ─── LOGGING ─────────────────────────────────────────────────────────────────
 if (env.NODE_ENV === "development") {
     app.use(morgan("dev", { stream: logger.stream }));
 } else {
     app.use(morgan("combined", { stream: logger.stream }));
 }
 
-/**
- * Helmet - Security headers
- * Why: Protects against common web vulnerabilities
- * Sets headers like X-Frame-Options, X-Content-Type-Options, etc.
- */
-app.use(helmet());
-
-/**
- * GLOBAL RATE LIMITER
- * Why: Applied to all requests as baseline DoS protection
- * Very lenient in development (1000 req/15min)
- * More strict in production (200 req/15min)
- */
+// ─── RATE LIMITING ───────────────────────────────────────────────────────────
 app.use(globalLimiter);
 
-
-/**
- * ROUTE-SPECIFIC RATE LIMITING
- * Why: Each route type needs different protection levels
- * - Auth routes: Strictest (prevent brute force)
- * - API routes: Moderate (normal traffic)
- * - Analytics: No extra limit (responses are cached)
- * - Admin: Lenient (admins need flexibility for bulk operations)
- */
-
-app.use('/api/auth', authLimiter, authRoutes);
+// ─── ROUTES ──────────────────────────────────────────────────────────────────
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/posts", apiLimiter, postRoutes);
 app.use("/api/users", apiLimiter, userRoutes);
 app.use("/api/comments", apiLimiter, commentRoutes);
 app.use("/api/analytics", analyticsRoutes);
-
 app.use("/api/admin", adminLimiter, adminRoutes);
 app.use("/api/notifications", apiLimiter, notificationRoutes);
 app.use("/api/reports", apiLimiter, reportRoutes);
 app.use("/api/ai", aiRoutes);
 
+// ─── HEALTH CHECK ────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({
+        status: "ok",
+        environment: env.NODE_ENV,
+        timestamp: new Date().toISOString(),
+    });
 });
 
-app.get('/', (req, res) => {
-    res.json({ message: "Backend is running " });
-});
-
+// ─── ERROR HANDLING ───────────────────────────────────────────────────────────
+// These MUST come last, after all routes
 app.use(notFound);
 app.use(errorHandler);
 

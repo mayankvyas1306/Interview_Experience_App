@@ -1,30 +1,30 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
   withCredentials: true,
 });
 
-// ✅ CRITICAL FIX: Axios Request Interceptor with better token handling
-// This interceptor runs before every request
+// ─── Request Interceptor ──────────────────────────────────────────────────────
 api.interceptors.request.use(
   (config) => {
-    //Browser automatically sends httpOnly cookies
+    // httpOnly cookies are sent automatically by the browser
+    // No manual token injection needed here
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-//Response Interceptor for handling auth errors
+// ─── Response Interceptor ────────────────────────────────────────────────────
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // If we get 401 Unauthorized, user token is invalid
+  (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Only redirect if we're not already on login page
-      if (typeof window !== "undefined" && !window.location.pathname.includes("/auth/login")) {
+      // Only redirect if we're not already on an auth page
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.includes("/auth/")
+      ) {
         localStorage.clear();
         window.location.href = "/auth/login";
       }
@@ -32,3 +32,25 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// ─── Error message extractor ──────────────────────────────────────────────────
+/**
+ * Safely extracts a human-readable error message from an axios error.
+ * Use this instead of err?.response?.data?.message everywhere.
+ *
+ * @example
+ * try {
+ *   await api.post('/posts', data);
+ * } catch (err) {
+ *   toast.error(getErrorMessage(err));
+ * }
+ */
+export function getErrorMessage(error: unknown, fallback = "Something went wrong"): string {
+  if (error instanceof AxiosError) {
+    return (error.response?.data as { message?: string })?.message ?? fallback;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return fallback;
+}

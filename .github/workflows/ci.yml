@@ -8,6 +8,7 @@ on:
       - master
 
 jobs:
+  # ─── CLIENT ────────────────────────────────────────────────────────────────
   client:
     runs-on: ubuntu-latest
     defaults:
@@ -15,11 +16,12 @@ jobs:
         working-directory: client
     env:
       NEXT_PUBLIC_API_URL: http://localhost:5000/api
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -32,28 +34,46 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Type check
+        run: npx tsc --noEmit
+
       - name: Build
         run: npm run build
 
+  # ─── SERVER ────────────────────────────────────────────────────────────────
   server:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: server
+
+    # Start MongoDB as a service for integration tests
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       NODE_ENV: test
       PORT: 5000
       CLIENT_URL: http://localhost:3000
       JWT_COOKIE_NAME: token
       JWT_COOKIE_EXPIRES_DAYS: 7
-      MONGO_URI: mongodb://localhost:27017/interview_experience_app
-      JWT_SECRET: test-secret
-      GEMINI_API_KEY: test-key
+      MONGO_URI: mongodb://localhost:27017/interview_experience_test
+      JWT_SECRET: test-secret-key-for-ci-only
+      GEMINI_API_KEY: test-key-not-used-in-tests
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Use Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -65,3 +85,7 @@ jobs:
 
       - name: Validate environment config
         run: node -e "require('./src/config/env').validateEnv();"
+
+      # ✅ Tests now actually run in CI
+      - name: Run tests
+        run: npm test -- --forceExit --detectOpenHandles

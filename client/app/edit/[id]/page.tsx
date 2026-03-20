@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { api } from "@/lib/api";
+import { api, getErrorMessage } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import TagInput from "@/components/TagInput";
+import type { Difficulty, Result } from "@/constants/options";
 
 type Round = {
   roundName: string;
@@ -23,12 +25,13 @@ export default function EditPostPage() {
 
   const [companyName, setCompanyName] = useState("");
   const [role, setRole] = useState("");
-  const [difficulty, setDifficulty] = useState<"Easy" | "Medium" | "Hard">("Medium");
-  const [result, setResult] = useState<"Selected" | "Rejected" | "Waiting">("Waiting");
-  const [tagsInput, setTagsInput] = useState("");
+  const [difficulty, setDifficulty] = useState<Difficulty>("Medium");
+  const [result, setResult] = useState<Result>("Waiting");
+  const [tags, setTags] = useState<string[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
 
+  // ── Load existing post data ───────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
@@ -45,11 +48,11 @@ export default function EditPostPage() {
         setRole(p.role || "");
         setDifficulty(p.difficulty || "Medium");
         setResult(p.result || "Waiting");
-        setTagsInput((p.tags || []).join(", "));
+        setTags(p.tags || []);         // ← now an array, not comma-separated string
         setRounds(p.rounds || []);
         setIsAnonymous(p.isAnonymous || false);
-      } catch (err: any) {
-        toast.error(err?.response?.data?.message || "Failed to load post");
+      } catch (err) {
+        toast.error(getErrorMessage(err, "Failed to load post"));
         router.push("/explore");
       } finally {
         setLoading(false);
@@ -59,16 +62,11 @@ export default function EditPostPage() {
     load();
   }, [postId, router, user]);
 
-  // ---------------- ROUNDS ----------------
-
+  // ── Rounds management ────────────────────────────────────────────────────
   const addRound = () => {
     setRounds((prev) => [
       ...prev,
-      {
-        roundName: `Round ${prev.length + 1}`,
-        description: "",
-        questions: [""],
-      },
+      { roundName: `Round ${prev.length + 1}`, description: "", questions: [""] },
     ]);
   };
 
@@ -79,7 +77,7 @@ export default function EditPostPage() {
   const updateRoundField = (
     index: number,
     field: "roundName" | "description",
-    value: string,
+    value: string
   ) => {
     setRounds((prev) => {
       const copy = [...prev];
@@ -99,17 +97,14 @@ export default function EditPostPage() {
   const removeQuestion = (roundIndex: number, qIndex: number) => {
     setRounds((prev) => {
       const copy = [...prev];
-      copy[roundIndex].questions =
-        copy[roundIndex].questions.filter((_, i) => i !== qIndex);
+      copy[roundIndex].questions = copy[roundIndex].questions.filter(
+        (_, i) => i !== qIndex
+      );
       return copy;
     });
   };
 
-  const updateQuestion = (
-    roundIndex: number,
-    qIndex: number,
-    value: string,
-  ) => {
+  const updateQuestion = (roundIndex: number, qIndex: number, value: string) => {
     setRounds((prev) => {
       const copy = [...prev];
       copy[roundIndex].questions[qIndex] = value;
@@ -117,34 +112,29 @@ export default function EditPostPage() {
     });
   };
 
+  // ── Save ─────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!companyName.trim() || !role.trim()) {
       toast.error("Company name and role are required");
       return;
     }
 
+    setSaving(true);
     try {
-      setSaving(true);
-
-      const tags = tagsInput
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
-
       await api.put(`/posts/${postId}`, {
         companyName,
         role,
         difficulty,
         result,
-        tags,
+        tags,            // ← send array directly, not comma-separated string
         rounds,
         isAnonymous,
       });
 
-      toast.success("Post updated");
+      toast.success("Post updated ✅");
       router.push(`/post/${postId}`);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to update post");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to update post"));
     } finally {
       setSaving(false);
     }
@@ -153,7 +143,8 @@ export default function EditPostPage() {
   if (loading) {
     return (
       <div className="container py-5 text-center">
-        <div className="spinner-border text-light" role="status"></div>
+        <div className="spinner-border text-light" role="status" />
+        <p className="text-muted2 mt-3">Loading post...</p>
       </div>
     );
   }
@@ -187,11 +178,11 @@ export default function EditPostPage() {
             <select
               className="form-select bg-transparent text-light border-secondary"
               value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value as "Easy" | "Medium" | "Hard")}
+              onChange={(e) => setDifficulty(e.target.value as Difficulty)}
             >
-              <option value="Easy">Easy</option>
-              <option value="Medium">Medium</option>
-              <option value="Hard">Hard</option>
+              <option value="Easy" className="bg-dark">Easy</option>
+              <option value="Medium" className="bg-dark">Medium</option>
+              <option value="Hard" className="bg-dark">Hard</option>
             </select>
           </div>
 
@@ -200,47 +191,49 @@ export default function EditPostPage() {
             <select
               className="form-select bg-transparent text-light border-secondary"
               value={result}
-              onChange={(e) => setResult(e.target.value as "Selected" | "Rejected" | "Waiting")}
+              onChange={(e) => setResult(e.target.value as Result)}
             >
-              <option value="Selected">Selected</option>
-              <option value="Rejected">Rejected</option>
-              <option value="Waiting">Waiting</option>
+              <option value="Selected" className="bg-dark">Selected</option>
+              <option value="Rejected" className="bg-dark">Rejected</option>
+              <option value="Waiting" className="bg-dark">Waiting</option>
             </select>
           </div>
 
+          {/* Tags — now using same TagInput as create page */}
           <div className="col-12">
-            <label className="form-label text-muted2">Tags (comma separated)</label>
-            <input
-              className="form-control bg-transparent text-light border-secondary"
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-            />
+            <label className="form-label text-muted2">Tags</label>
+            <TagInput tags={tags} onChange={setTags} />
           </div>
         </div>
 
-        {/* INTERVIEW ROUNDS SECTION */}
+        {/* Interview Rounds */}
         <div className="mt-5">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <h4 className="fw-bold mb-0">Interview Rounds</h4>
             <button
               onClick={addRound}
-              className="btn btn-sm btn-accent rounded-pill px-3 shadow-sm"
-              style={{ fontWeight: "600" }}
+              className="btn btn-sm btn-accent rounded-pill px-3"
             >
-              <i className="bi bi-plus-lg me-1"></i> Add Round
+              <i className="bi bi-plus-lg me-1" />
+              Add Round
             </button>
           </div>
 
           <div className="d-flex flex-column gap-4">
             {rounds.map((round, rIndex) => (
-              <div key={rIndex} className="p-4 border border-secondary rounded-4 position-relative" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <div
+                key={rIndex}
+                className="p-4 border border-secondary rounded-4 position-relative"
+                style={{ background: "rgba(255,255,255,0.02)" }}
+              >
                 {rounds.length > 1 && (
                   <button
                     onClick={() => removeRound(rIndex)}
                     className="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-3 rounded-circle"
-                    style={{ width: "32px", height: "32px", padding: 0 }}
+                    style={{ width: 32, height: 32, padding: 0 }}
+                    aria-label="Remove round"
                   >
-                    <i className="bi bi-trash"></i>
+                    <i className="bi bi-trash" />
                   </button>
                 )}
 
@@ -251,33 +244,42 @@ export default function EditPostPage() {
                       className="form-control bg-transparent text-light border-secondary"
                       placeholder="e.g. Online Assessment"
                       value={round.roundName}
-                      onChange={(e) => updateRoundField(rIndex, "roundName", e.target.value)}
+                      onChange={(e) =>
+                        updateRoundField(rIndex, "roundName", e.target.value)
+                      }
                     />
                   </div>
                   <div className="col-md-8">
-                    <label className="form-label text-muted2 small">Description (Optional)</label>
+                    <label className="form-label text-muted2 small">
+                      Description (Optional)
+                    </label>
                     <textarea
                       className="form-control bg-transparent text-light border-secondary"
                       placeholder="What was this round about?"
                       rows={2}
                       value={round.description}
-                      onChange={(e) => updateRoundField(rIndex, "description", e.target.value)}
+                      onChange={(e) =>
+                        updateRoundField(rIndex, "description", e.target.value)
+                      }
                     />
                   </div>
                 </div>
 
-                {/* QUESTIONS */}
                 <div>
                   <div className="d-flex justify-content-between align-items-center mb-2">
-                    <label className="form-label text-muted2 small mb-0">Questions Asked</label>
+                    <label className="form-label text-muted2 small mb-0">
+                      Questions Asked
+                    </label>
                     <button
                       onClick={() => addQuestion(rIndex)}
-                      className="btn btn-sm btn-accent rounded-pill px-3 shadow-sm"
-                      style={{ fontSize: "0.8rem", fontWeight: "600" }}
+                      className="btn btn-sm btn-accent rounded-pill px-3"
+                      style={{ fontSize: "0.8rem" }}
                     >
-                      <i className="bi bi-plus-circle me-1"></i> Add Question
+                      <i className="bi bi-plus-circle me-1" />
+                      Add Question
                     </button>
                   </div>
+
                   <div className="d-flex flex-column gap-2">
                     {round.questions?.map((q, qIndex) => (
                       <div key={qIndex} className="d-flex gap-2">
@@ -286,15 +288,18 @@ export default function EditPostPage() {
                           placeholder="e.g. Write a function to reverse a linked list..."
                           rows={2}
                           value={q}
-                          onChange={(e) => updateQuestion(rIndex, qIndex, e.target.value)}
-                          style={{ minHeight: "60px", resize: "vertical" }}
+                          onChange={(e) =>
+                            updateQuestion(rIndex, qIndex, e.target.value)
+                          }
+                          style={{ minHeight: 60, resize: "vertical" }}
                         />
                         {round.questions.length > 1 && (
                           <button
                             onClick={() => removeQuestion(rIndex, qIndex)}
                             className="btn btn-sm btn-outline-danger"
+                            aria-label="Remove question"
                           >
-                            <i className="bi bi-trash"></i>
+                            <i className="bi bi-trash" />
                           </button>
                         )}
                       </div>
@@ -306,7 +311,7 @@ export default function EditPostPage() {
           </div>
         </div>
 
-        {/* ANONYMOUS TOGGLE */}
+        {/* Anonymous toggle */}
         <div className="mt-4 form-check form-switch d-flex align-items-center gap-2">
           <input
             className="form-check-input bg-transparent border-secondary"
@@ -314,9 +319,13 @@ export default function EditPostPage() {
             id="anonymousSwitch"
             checked={isAnonymous}
             onChange={(e) => setIsAnonymous(e.target.checked)}
-            style={{ width: "40px", cursor: "pointer" }}
+            style={{ width: 40, cursor: "pointer" }}
           />
-          <label className="form-check-label text-light mb-0" htmlFor="anonymousSwitch" style={{ cursor: "pointer" }}>
+          <label
+            className="form-check-label text-light mb-0"
+            htmlFor="anonymousSwitch"
+            style={{ cursor: "pointer" }}
+          >
             Post Anonymously
             <span className="text-muted2 ms-2 small fw-normal">
               (Your name, college, and year will be hidden)
@@ -324,8 +333,19 @@ export default function EditPostPage() {
           </label>
         </div>
 
-        <button onClick={handleSave} disabled={saving} className="btn btn-accent mt-4">
-          {saving ? "Saving..." : "Save Changes"}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn btn-accent mt-4 px-5"
+        >
+          {saving ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
         </button>
       </div>
     </div>

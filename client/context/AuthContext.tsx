@@ -1,62 +1,61 @@
 "use client";
 
 import { api } from "@/lib/api";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 
-type AuthUser = {
+export interface AuthUser {
   id: string;
   fullName: string;
   email: string;
   role: "user" | "admin";
   token: string;
-};
+}
 
-type AuthContextType = {
+interface AuthContextType {
   user: AuthUser | null;
   login: (user: AuthUser) => void;
   logout: () => void;
-};
+}
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  // 🔁 Restore user on refresh
+  // Restore user from localStorage on first render
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      try{
-        setUser(JSON.parse(storedUser));
-      }catch(error){
-        console.error("Failed to parse stored user:",error);
-        localStorage.clear();
-      }
+    if (!storedUser) return;
+
+    try {
+      setUser(JSON.parse(storedUser) as AuthUser);
+    } catch {
+      // Corrupted storage — clear everything and start fresh
+      localStorage.clear();
     }
   }, []);
 
-  // ✅ Save full user object
-  const login = (user: AuthUser) => {
-    localStorage.setItem("user", JSON.stringify(user));
-    localStorage.setItem("token", user.token);
-    localStorage.setItem("userId",user.id);
-    setUser(user);
-  };
+  const login = useCallback((userData: AuthUser) => {
+    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", userData.token);
+    localStorage.setItem("userId", userData.id);
+    setUser(userData);
+  }, []);
 
-  const logout = async() => {
-    try{
+  const logout = useCallback(async () => {
+    try {
       await api.post("/auth/logout");
-    }catch{}
-    setUser(null);
+    } catch {
+      // Silent — we always log out on the client even if the server call fails
+    }
 
-    //clear all auth data from localStorage
+    setUser(null);
     localStorage.clear();
 
-
-    //Redirect to login page
-    //prevents showing blank page, gives clear next action
+    // Hard redirect to clear all component state
     window.location.href = "/auth/login";
-  };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
@@ -65,9 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// custom hook
-export const useAuth = () => {
+export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
-};
+}
