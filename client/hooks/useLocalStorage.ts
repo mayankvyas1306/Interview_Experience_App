@@ -1,17 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+// ✅ Fixed: removed unused `useEffect` import
 
 /**
- * useLocalStorage — safe localStorage hook.
+ * useLocalStorage — safe localStorage hook with SSR support.
  *
  * Problems this solves:
  * 1. Next.js runs on the server where localStorage doesn't exist.
- *    Direct localStorage access throws "localStorage is not defined".
- *    This hook handles SSR safely.
- *
- * 2. JSON parse errors from corrupted storage silently fail.
+ *    Direct access throws "localStorage is not defined" during SSR.
+ * 2. JSON parse errors from corrupted storage crash silently.
  *    This hook catches them and returns the default value.
- *
- * 3. Keeps React state in sync with localStorage changes.
  */
 export function useLocalStorage<T>(
     key: string,
@@ -25,7 +22,6 @@ export function useLocalStorage<T>(
             const item = window.localStorage.getItem(key);
             return item ? (JSON.parse(item) as T) : initialValue;
         } catch {
-            // If parsing fails, return the default
             return initialValue;
         }
     });

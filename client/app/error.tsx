@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 
 interface ErrorPageProps {
@@ -7,13 +8,8 @@ interface ErrorPageProps {
     reset: () => void;
 }
 
-/**
- * Next.js special file — shown when an unhandled error occurs in a page.
- * Must be "use client" — it receives the error object.
- */
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
     useEffect(() => {
-        // Log to error monitoring service (Sentry, etc.) in production
         console.error("Page error:", error);
     }, [error]);
 
@@ -31,7 +27,6 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
                     into it.
                 </p>
 
-                {/* Show error digest in development for debugging */}
                 {process.env.NODE_ENV === "development" && (
                     <div
                         className="glass rounded-3 p-3 mb-4 text-start"
@@ -48,9 +43,10 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
                     >
                         Try again
                     </button>
-                    <a href="/" className="btn btn-outline-light rounded-3 px-4">
+                    {/* ✅ Fixed: use Link instead of <a> for internal navigation */}
+                    <Link href="/" className="btn btn-outline-light rounded-3 px-4">
                         Go Home
-                    </a>
+                    </Link>
                 </div>
             </div>
         </div>

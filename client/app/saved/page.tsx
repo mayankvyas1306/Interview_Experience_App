@@ -1,41 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
 import PostCard from "@/components/PostCard";
 import { useRouter } from "next/navigation";
+import type { Post } from "@/types/api";
 
 export default function SavedPage() {
   const router = useRouter();
-
-  const [savedPosts, setSavedPosts] = useState<any[]>([]);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchSavedPosts = async () => {
+  // ✅ Fixed: useCallback so useEffect can safely depend on it
+  const fetchSavedPosts = useCallback(async () => {
     try {
       setLoading(true);
-
       const res = await api.get("/users/saved");
       setSavedPosts(res.data.savedPosts);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to load saved posts");
-
-      // if token missing/invalid -> redirect to login
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to load saved posts";
+      toast.error(message);
       router.push("/auth/login");
     } finally {
       setLoading(false);
     }
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]); // router is stable in Next.js
+
+  // ✅ Fixed: honest dependency array, no eslint-disable needed
   useEffect(() => {
     fetchSavedPosts();
-  }, []);
+  }, [fetchSavedPosts]);
 
   return (
     <div className="container py-5">
-
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
@@ -43,7 +43,7 @@ export default function SavedPage() {
         className="glass glow-border p-4 p-md-5 rounded-4 mb-4"
       >
         <h2 className="fw-bold mb-1">
-          Saved Posts <i className="bi bi-bookmarks ms-2"></i>
+          Saved Posts <i className="bi bi-bookmarks ms-2" />
         </h2>
         <p className="text-muted2 mb-0">
           Your bookmarked interview experiences for quick revision.
@@ -51,9 +51,9 @@ export default function SavedPage() {
       </motion.div>
 
       {loading ? (
-        <div className="text-center text-muted2 py-5">
-          <div className="spinner-border text-light"></div>
-          <div className="mt-3">Loading saved posts...</div>
+        <div className="text-center py-5">
+          <div className="spinner-border text-light" />
+          <div className="text-muted2 mt-3">Loading saved posts...</div>
         </div>
       ) : savedPosts.length === 0 ? (
         <div className="glass rounded-4 p-5 text-center">
