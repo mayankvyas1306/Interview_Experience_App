@@ -116,7 +116,7 @@ const getCompanyStats = async (req, res, next) => {
       matchStage,
       {
         $project: {
-          numberOfRounds: { $size: "$rounds" }, // Calculate size of rounds array
+          numberOfRounds: { $size: { $ifNull: ["$rounds", []] } }, // Calculate size of rounds array safely
         },
       },
       {

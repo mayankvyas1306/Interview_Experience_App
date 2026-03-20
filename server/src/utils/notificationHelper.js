@@ -20,24 +20,15 @@ const createNotification = async ({
     message,
 }) => {
 
+    console.log(`[NOTIFY] createNotification called: type=${type}, recipient=${recipientId}, sender=${senderId}`);
     //Don't notify user about their own actions
     if (senderId && String(senderId) === String(recipientId)) {
+        console.log(`[NOTIFY] ⚠️ Skipping self-notification`);
         return null;
     }
 
     try {
-        //upvote coooldown: dont send more than one upvote notification
-        //per post per hour to avoid spam
-        if (type === "upvote") {
-            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-            const recentNotification = await Notification.findOne({
-                recipientId,
-                type: "upvote",
-                postId,
-                createdAt: { $gte: oneHourAgo },
-            });
-            if (recentNotification) return null;//skip -notified recently
-        }
+        // Anti-spam cooldown removed for easier testing in portfolio mode.
 
         const notification = await Notification.create({
             recipientId,
@@ -47,14 +38,16 @@ const createNotification = async ({
             message,
         });
 
-        //push to recipient if they have an active SSE connection
-        sendToUser(String(recipientId), "notification", {
-            id: notification._id,
+        //push to recipient if they have active SSE connections
+        const delivered = sendToUser(String(recipientId), "notification", {
+            _id: String(notification._id),
             type: notification.type,
             message: notification.message,
             postId: notification.postId,
             createdAt: notification.createdAt,
+            read: false,
         });
+        console.log(`[NOTIFY] SSE dispatch for recipient=${recipientId}: delivered=${delivered}`);
 
         return notification;
     } catch (err) {

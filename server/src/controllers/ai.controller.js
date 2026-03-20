@@ -22,9 +22,9 @@ const analyzePost = async (req, res, next) => {
         if (!post) throw new AppError("Post not found", 404);
 
         // Build a concise summary of the post for the prompt
-        const roundsSummary = post.rounds
+        const roundsSummary = (post.rounds || [])
             .map((r, i) =>
-                `Round ${i + 1} (${r.roundName}): ${r.description || "No description"}. Questions: ${r.questions.slice(0, 3).join("; ") || "None listed"}`
+                `Round ${i + 1} (${r.roundName}): ${r.description || "No description"}. Questions: ${(r.questions || []).slice(0, 3).join("; ") || "None listed"}`
             )
             .join("\n");
 
@@ -113,6 +113,9 @@ Rules:
 - Only use tags from the provided list
 - Base selection on the role and questions discussed
 - Respond with ONLY valid JSON, no explanation:
+- Do NOT use markdown
+- Response must start with { and end with }
+- Do NOT explain anything
 
 {"tags": ["tag1", "tag2"]}`;
 
@@ -194,7 +197,11 @@ Create a comprehensive preparation guide. Respond with ONLY valid JSON:
   "salary_negotiation": "Brief advice on salary discussion at ${company}"
 }`;
 
-        const rawResponse = await generateContent(prompt, 20000);
+        const rawResponse = await generateContent(prompt, 60000);
+
+        console.log("==== AI RAW RESPONSE ====");
+        console.log(rawResponse);
+        console.log("=========================");
         const guide = safeParseJSON(rawResponse);
 
         if (!guide) {
@@ -255,8 +262,8 @@ const compareCompanies = async (req, res, next) => {
         const summarize = (posts, name) => {
             if (posts.length === 0) return `No data for ${name}`;
             const avgRounds =
-                posts.reduce((s, p) => s + p.rounds.length, 0) / posts.length;
-            const tags = [...new Set(posts.flatMap((p) => p.tags))].slice(0, 5);
+                posts.reduce((s, p) => s + (p.rounds ? p.rounds.length : 0), 0) / posts.length;
+            const tags = [...new Set(posts.flatMap((p) => p.tags || []))].slice(0, 5);
             const results = posts.reduce((acc, p) => {
                 acc[p.result] = (acc[p.result] || 0) + 1;
                 return acc;
@@ -293,7 +300,7 @@ Respond with ONLY valid JSON:
   "recommendation": "Which to target first and why"
 }`;
 
-        const rawResponse = await generateContent(prompt, 20000);
+        const rawResponse = await generateContent(prompt, 60000);
         const comparison = safeParseJSON(rawResponse);
 
         if (!comparison) {
@@ -347,7 +354,7 @@ const getPracticeQuestions = async (req, res, next) => {
             .lean();
 
         const realQuestions = realPosts
-            .flatMap((p) => p.rounds.flatMap((r) => r.questions))
+            .flatMap((p) => (p.rounds || []).flatMap((r) => r.questions || []))
             .filter(Boolean)
             .slice(0, 5);
 

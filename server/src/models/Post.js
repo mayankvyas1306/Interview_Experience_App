@@ -12,9 +12,10 @@ const roundSchema = new mongoose.Schema(
             required: false,
             default: ""
         },
-        questions: [{
-            type: String
-        }],
+        questions: {
+            type: [String],
+            default: []
+        },
     }, { _id: false }
 );
 

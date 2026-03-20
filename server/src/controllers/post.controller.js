@@ -180,7 +180,7 @@ const getPostById = async (req, res, next) => {
 //update Post
 const updatePost = async (req, res, next) => {
   try {
-    const { companyName, role, tags, difficulty, result, rounds } = req.body;
+    const { companyName, role, tags, difficulty, result, rounds, isAnonymous } = req.body;
 
     const post = await Post.findById(req.params.id);
 
@@ -198,6 +198,7 @@ const updatePost = async (req, res, next) => {
     post.difficulty = difficulty || post.difficulty;
     post.result = result || post.result;
     post.rounds = rounds !== undefined ? rounds : post.rounds;
+    post.isAnonymous = isAnonymous !== undefined ? isAnonymous : post.isAnonymous;
 
     const updatePost = await post.save();
     clearCacheByPrefix("analytics:");
