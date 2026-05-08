@@ -17,7 +17,7 @@ const notFound = (req, res, next) => {
  */
 const errorHandler = (err, req, res, next) => {
     //If header alredy sent, delegate to Express default handler
-    if (res.headerSent) {
+    if (res.headersSent) {
         return next(err);
     }
 

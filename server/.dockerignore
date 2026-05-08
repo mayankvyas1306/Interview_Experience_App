@@ -1,0 +1,29 @@
+# Dependencies — will be installed during Docker build
+node_modules
+npm-debug.log
+
+# Environment files — NEVER include in Docker image
+.env
+.env.*
+!.env.example
+
+# Test files — not needed in production image
+tests/
+*.test.js
+jest.log
+jest_open.log
+test_request.js
+test_request2.js
+error_output.json
+
+# Development tools
+.git
+.gitignore
+README.md
+
+# Logs
+logs/
+*.log
+
+# Migration scripts — not needed in running container
+src/scripts/
