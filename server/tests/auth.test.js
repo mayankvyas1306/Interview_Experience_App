@@ -1,67 +1,30 @@
-// ✅ MUST be first — loads .env for local dev
-// In CI, env vars are set directly by the workflow runner
+// ✅ MUST be first
 require("dotenv").config();
 
 const request = require("supertest");
 const mongoose = require("mongoose");
 const app = require("../src/app");
 
-// ─── Build a safe test database URI ──────────────────────────────────────────
-//
-// Strategy: never manipulate the URI if it already points to a test database.
-// Otherwise derive a test URI by inserting "interview_experience_test"
-// as the database name — handling all Atlas and local URI formats.
-//
-// Formats handled:
-//   mongodb+srv://host/?opts        (Atlas, trailing slash before ?)
-//   mongodb+srv://host?opts         (Atlas, no slash before ?)
-//   mongodb+srv://host/mydb?opts    (Atlas with db name)
-//   mongodb://localhost:27017/mydb  (local with db name)
-//   mongodb://localhost:27017       (local no db name)
-//   ""  or  undefined               (fallback to localhost)
-//
-const buildTestURI = () => {
-    const uri = process.env.MONGO_URI;
+// ─── Get the test database URI ────────────────────────────────────────────────
+// Priority order:
+// 1. TEST_MONGO_URI env var (explicit, safest — set this in .env)
+// 2. MONGO_URI from CI (GitHub Actions sets this to a local test URI)
+// 3. Local fallback
+const TEST_MONGO_URI =
+    process.env.TEST_MONGO_URI ||
+    process.env.MONGO_URI ||
+    "mongodb://localhost:27017/interview_experience_test";
 
-    // No URI — use local fallback
-    if (!uri) {
-        return "mongodb://localhost:27017/interview_experience_test";
-    }
-
-    // Already pointing at the test database — use as-is (covers CI case)
-    if (uri.includes("interview_experience_test")) {
-        return uri;
-    }
-
-    // Normalize: remove trailing slash immediately before ? or at end of string
-    // "mongodb+srv://host/?opts"  →  "mongodb+srv://host?opts"
-    // "mongodb+srv://host/"       →  "mongodb+srv://host"
-    const normalized = uri.replace(/\/\?/, "?").replace(/\/$/, "");
-
-    // Case A: URI already has a database name segment in the path
-    // Matches: everything-up-to-last-slash / db-name ? optional-query
-    const pathMatch = normalized.match(
-        /^(mongodb(?:\+srv)?:\/\/[^/]+\/)([^/?]+)(\?.*)?$/
+// Verify the URI contains "test" — refuse to run against production
+if (!TEST_MONGO_URI.toLowerCase().includes("test")) {
+    throw new Error(
+        `SAFETY: TEST_MONGO_URI "${TEST_MONGO_URI}" does not contain "test".\n` +
+        `Add TEST_MONGO_URI to your .env file pointing to a test database.`
     );
-    if (pathMatch) {
-        const [, prefix, , query] = pathMatch;
-        return `${prefix}interview_experience_test${query || ""}`;
-    }
+}
 
-    // Case B: No database name in path — insert before query string
-    if (normalized.includes("?")) {
-        return normalized.replace("?", "/interview_experience_test?");
-    }
-
-    // Case C: No database name, no query string
-    return `${normalized}/interview_experience_test`;
-};
-
-const TEST_MONGO_URI = buildTestURI();
-
-// Always visible in test output — confirms we're not on production
 console.log(
-    "🧪 Test database URI:",
+    "🧪 Test database:",
     TEST_MONGO_URI.replace(/:([^:@]+)@/, ":***@")
 );
 
@@ -76,23 +39,17 @@ beforeAll(async () => {
 afterAll(async () => {
     const currentDB = mongoose.connection.db?.databaseName ?? "";
 
-    // Safety guard: only clean up if we're definitely on a test database
-    const isSafe =
-        currentDB.toLowerCase().includes("test") ||
-        currentDB.toLowerCase().includes("jest");
-
-    if (isSafe) {
-        const collections = mongoose.connection.collections;
-        await Promise.all(
-            Object.values(collections).map((col) => col.deleteMany({}))
-        );
-        console.log(`✅ Cleaned up test database: "${currentDB}"`);
-    } else {
-        console.error(
-            `⛔ SAFETY: Skipping cleanup — "${currentDB}" does not look like a test database`
-        );
+    if (!currentDB.toLowerCase().includes("test")) {
+        console.error(`⛔ SAFETY: Not cleaning up "${currentDB}" — not a test database`);
+        await mongoose.connection.close();
+        return;
     }
 
+    const collections = mongoose.connection.collections;
+    await Promise.all(
+        Object.values(collections).map((col) => col.deleteMany({}))
+    );
+    console.log(`✅ Cleaned up: "${currentDB}"`);
     await mongoose.connection.close();
 });
 
@@ -153,9 +110,7 @@ describe("POST /api/auth/login", () => {
     };
 
     beforeAll(async () => {
-        const res = await request(app)
-            .post("/api/auth/register")
-            .send(credentials);
+        const res = await request(app).post("/api/auth/register").send(credentials);
         if (res.status !== 201) {
             console.error("Login setup failed:", res.status, JSON.stringify(res.body));
         }

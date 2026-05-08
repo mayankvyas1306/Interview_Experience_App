@@ -192,7 +192,7 @@ const getTrendingStats = async (req, res, next) => {
 // ─── 5. USER ANALYTICS ───────────────────────────────────────────────────────
 const getUserAnalytics = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const userPosts = await Post.find({ authorId: userId });
     const totalPosts = userPosts.length;
