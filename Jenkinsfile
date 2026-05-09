@@ -63,6 +63,37 @@ pipeline {
             }
         }
 
+        stage('Create Environment File') {
+            steps {
+
+                dir('server') {
+
+                    withCredentials([
+                        string(credentialsId: 'MONGO_URI', variable: 'MONGO_URI'),
+                        string(credentialsId: 'JWT_SECRET', variable: 'JWT_SECRET'),
+                        string(credentialsId: 'GEMINI_API_KEY', variable: 'GEMINI_API_KEY'),
+                        string(credentialsId: 'CLIENT_URL', variable: 'CLIENT_URL')
+                    ]) {
+
+                        bat '''
+                        (
+                        echo NODE_ENV=production
+                        echo PORT=5000
+                        echo CLIENT_URL=%CLIENT_URL%
+                        echo JWT_COOKIE_NAME=token
+                        echo JWT_COOKIE_EXPIRES_DAYS=7
+                        echo MONGO_URI=%MONGO_URI%
+                        echo JWT_SECRET=%JWT_SECRET%
+                        echo GEMINI_API_KEY=%GEMINI_API_KEY%
+                        ) > .env
+                        '''
+
+                        echo ' .env file created successfully'
+                    }
+                }
+            }
+        }
+
         // ─────────────────────────────────────────────
         // STAGE 4 — Stop Old Containers
         // ─────────────────────────────────────────────
