@@ -1,0 +1,81 @@
+version: "3.9"
+
+services:
+
+  # ─── Backend (Express.js API) ───────────────────────────────────────────────
+  backend:
+    # build: tells Docker to build this image from a Dockerfile.
+    # context: the folder to use as the build context (what gets sent to Docker).
+    # dockerfile: which Dockerfile to use inside that folder.
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+
+    container_name: interviewpulse_backend
+
+    restart: unless-stopped
+
+    # Port mapping: host port 5000 → container port 5000.
+    ports:
+      - "5000:5000"
+
+    # Environment variables for the backend.
+    # These replace your .env file inside the container.
+    # IMPORTANT: Never put real secrets here in a public repo.
+    # In production, use Docker secrets or a .env file that you don't commit.
+    env_file:
+      - ./server/.env
+
+    # Since we are using MongoDB Atlas (cloud database),
+    # we do not need a local MongoDB container.
+    # Backend will connect directly using MONGO_URI from .env
+
+    # Volumes: mount the server code into the container for development.
+    # This is optional for production but useful for development.
+    # ./server: your local server folder.
+    # /app: where it maps inside the container.
+    # This is called a "bind mount" — changes on your machine reflect in container.
+    # NOTE: In production, you would NOT do this — the code is baked into the image.
+    # We add it here for learning purposes. Comment it out for true production build.
+    # volumes:
+    #   - ./server:/app
+    #   - /app/node_modules  ← This prevents the container's node_modules from being overridden
+
+    networks:
+      - interviewpulse_network
+
+  # ─── Frontend (Next.js) ────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+
+      # Build arguments: passed to Dockerfile during build.
+      # This sets the API URL that gets baked into the Next.js bundle.
+      # IMPORTANT: This is the URL the BROWSER uses to call the API.
+      # The browser runs on your machine, not inside Docker.
+      # So it uses localhost:5000, not "backend:5000".
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5000/api
+
+    container_name: interviewpulse_frontend
+
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    # The frontend depends on the backend being up.
+    depends_on:
+      - backend
+
+    networks:
+      - interviewpulse_network
+
+# ─── Networks ─────────────────────────────────────────────────────────────────
+# Define the network that all containers share.
+# bridge is the default network type — containers on the same bridge network
+# can communicate with each other using service names as hostnames.
+networks:
+  interviewpulse_network:
+    driver: bridge
